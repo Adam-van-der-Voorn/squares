@@ -1,0 +1,25 @@
+body {
+    padding: 16px;
+    margin: 0;
+}
+
+.line {
+    position: absolute;
+}
+
+.line:not(.line-selected) {
+    background-color: transparent;
+}
+
+.line.line-selected {
+    background-color: rebeccapurple;
+}
+
+.line:not(.line-selected):hover {
+    background-color: blue;
+}
+
+.cell {
+    position: absolute;
+    border: grey 1px dotted;
+}
