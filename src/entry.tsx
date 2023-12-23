@@ -105,7 +105,30 @@ function newBoard(width: number, height: number): Board {
 }
 
 function App() {
-    const [board, setBoard] = useState(() => newBoard(10, 10))
+    const [winState, setWinState] = useState<any>(null);
+
+    let message;
+    if (winState == null) {
+        message = ""
+    }
+    else if (winState.winner == `p1`) {
+        message = `Player one wins, ${winState.p1}-${winState.p2}!`
+    }
+    else if (winState.winner == `p2`) {
+        message = `Player two wins, ${winState.p2}-${winState.p1}!`
+    }
+    else {
+        message = `It was a tie, ${winState.p1} all!`
+    }
+    
+    return <>
+        <Game onWin={setWinState} />
+        { message }
+    </>
+}
+
+function Game({ onWin }: any) {
+    const [board, setBoard] = useState(() => newBoard(1, 2))
     const [turn, setTurn] = useState<("p1" | "p2")>("p1");
 
     const clickLine = (ev: any) => {
@@ -153,11 +176,14 @@ function App() {
             }
         }
         console.log("new claimed =", newClaimedSquares)
-
         setBoard(newBoard)
         if (newClaimedSquares === currentClaimedSquares) {
             console.log("switching turn")
             setTurn(t => t === "p1" ? "p2" : "p1")
+        }
+        const winner = getWinner(newBoard);
+        if (winner) {
+            onWin(winner)
         }
         console.groupEnd()
     }
@@ -213,6 +239,32 @@ function Line({ x, y, k, selected, horiOrVert, onClick }: any) {
         style={style}
         onClick={onClick}
     ></div>
+}
+
+function getWinner(board: Board) {
+    const cells = unpack(board.cells).map(c => c.val)
+    const isWon = cells.every(c => c.claim !== null);
+    if (!isWon) {
+        return null;
+    }
+
+    // count claims
+    const claims = { p1: 0, p2: 0}
+    for (const cell of cells) {
+        claims[cell.claim!] += 1
+    }
+    
+    let winner
+    if (claims.p1 > claims.p2) {
+        winner = "p1"
+    }
+    else if (claims.p1 < claims.p2) {
+        winner = "p2"
+    }
+    else {
+        winner = "tie"
+    }
+    return { ...claims, winner }
 }
 
 function unpack<T>(arr: T[][]) {
