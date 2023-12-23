@@ -23,14 +23,15 @@ export function App() {
         message = `It was a tie, ${winState.p1} all!`
     }
     
-    return <>
+    return <div className="content">
         <Game onWin={setWinState} />
         { message }
-    </>
+    </div>
 }
 
 function Game({ onWin }: any) {
-    const [board, setBoard] = useState(() => newBoard(1, 2))
+    const width = 5, height = 5;
+    const [board, setBoard] = useState(() => newBoard(width, height))
     const [turn, setTurn] = useState<("p1" | "p2")>("p1");
 
     const clickLine = (ev: any) => {
@@ -78,10 +79,18 @@ function Game({ onWin }: any) {
         return <Line key={key} k={key} x={x} y={y} horiOrVert={horiOrVert} onClick={clickLine} selected={line.selected} />
     })
 
+    const squaresStyle = {
+        width: `${CELL_VISUAL_SIZE * width}px`,
+        height: `${CELL_VISUAL_SIZE * height}px`
+
+    }
+
     return <>
-        <p>{turn}</p>
-        {cellsJsx}
-        {linesJsx}
+        <div className="squares" style={squaresStyle}>
+            {cellsJsx}
+            {linesJsx}
+        </div>
+        <div className="panel">{turn}</div>
     </>
 }
 

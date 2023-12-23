@@ -1,6 +1,20 @@
 body {
-    padding: 16px;
+    padding: 0;
     margin: 0;
+}
+
+.content {
+    padding: 16px;
+
+}
+
+.squares {
+    position: relative;
+    margin: auto;
+}
+
+.panel {
+    margin: auto;
 }
 
 .line {
