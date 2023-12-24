@@ -95,6 +95,14 @@ export function newBoard(width: number, height: number): Board {
     return { cells, lines }
 }
 
+export function boardDimensions(board: Board): { rows: number, cols: number } {
+    return {
+        // rows are inner arrays
+        rows: board.cells[0].length,
+        cols: board.cells.length
+    }
+}
+
 export function numClaimedSquaresForLine(board: Board, lineKey: string): number {
     let numClaimed = 0;
     for (const {x, y} of board.lines[lineKey].cells) {

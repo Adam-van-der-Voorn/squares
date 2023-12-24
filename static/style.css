@@ -23,6 +23,12 @@ body {
     margin: auto;
 }
 
+.dot {
+    z-index: 2;
+    position: absolute;
+    background-color: black;
+}
+
 .panel {
     margin: auto;
 }
@@ -46,6 +52,5 @@ body {
 
 .cell {
     position: absolute;
-    border: grey 1px dotted;
     box-sizing: border-box;
 }

@@ -1,10 +1,11 @@
 import React from "react";
 import { useState } from "react";
-import { newBoard, Board, selectLine, getWinner } from "./game";
+import { newBoard, Board, selectLine, getWinner, boardDimensions } from "./game";
 import { unpack } from "./util";
 
 const CELL_VISUAL_SIZE = 40;
 const LINE_VISUAL_RADIUS = 4;
+const DOT_VISUAL_RADIUS = 2;
 
 export function App() {
     const [winState, setWinState] = useState<any>(null);
@@ -22,11 +23,11 @@ export function App() {
     else {
         message = `It was a tie, ${winState.p1} all!`
     }
-    
+
     return <div className="content">
         <div className="card">
             <Game onWin={setWinState} />
-            { message }
+            {message}
         </div>
     </div>
 }
@@ -44,7 +45,7 @@ function Game({ onWin }: any) {
         }
         const newBoard: Board = { ...board }
         console.group("Line :", key)
-        
+
         // prev
         let newClaimedSquares = selectLine(newBoard, key, turn);
         console.log("new claimed =", newClaimedSquares)
@@ -76,6 +77,59 @@ function Game({ onWin }: any) {
         </div>
     })
 
+    const dotsJsx = unpack(board.cells).flatMap(({ x, y }) => {
+        const dots = []
+        const baseStyle = {
+            width: `${DOT_VISUAL_RADIUS * 2}px`,
+            height: `${DOT_VISUAL_RADIUS * 2}px`,
+            borderRadius: `${DOT_VISUAL_RADIUS}px`
+        }
+        const brDot = <div className={"dot"}
+            key={`dot-br-${x}-${y}`}
+            style={{
+                ...baseStyle,
+                top: `${(y * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
+                left: `${(x * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
+            }}
+        ></div>
+        dots.push(brDot);
+        if (x === 0 || y === 0) {
+            const tlDot = <div className={"dot"}
+                key={`dot-tl-${x}-${y}`}
+                style={{
+                    ...baseStyle,
+                    top: `${(y * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
+                    left: `${(x * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
+                }}
+            ></div>
+            dots.push(tlDot)
+        }
+        const { rows, cols } = boardDimensions(board);
+        if (x === 0 && y === rows - 1) {
+            const blDot = <div className={"dot"}
+                key={`dot-bl-${x}-${y}`}
+                style={{
+                    ...baseStyle,
+                    top: `${(y * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
+                    left: `${(x * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
+                }}
+            ></div>
+            dots.push(blDot)
+        }
+        if (y === 0 && x === cols - 1) {
+            const trDot = <div className={"dot"}
+                key={`dot-tr-${x}-${y}`}
+                style={{
+                    ...baseStyle,
+                    top: `${(y * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
+                    left: `${(x * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
+                }}
+            ></div>
+            dots.push(trDot)
+        }
+        return dots;
+    })
+
     const linesJsx = Object.entries(board.lines).map(([key, line]) => {
         const { x, y, horiOrVert } = line.key;
         return <Line key={key} k={key} x={x} y={y} horiOrVert={horiOrVert} onClick={clickLine} selected={line.selected} />
@@ -91,6 +145,7 @@ function Game({ onWin }: any) {
         <div className="squares" style={squaresStyle}>
             {cellsJsx}
             {linesJsx}
+            {dotsJsx}
         </div>
         <div className="panel">{turn}</div>
     </>
