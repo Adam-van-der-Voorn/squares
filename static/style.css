@@ -1,11 +1,21 @@
 body {
     padding: 0;
     margin: 0;
+    background-color: pink;
 }
 
 .content {
     padding: 16px;
 
+}
+
+.card {
+    padding: 40px; /* look nice same as square size*/
+    width: fit-content;
+    margin: auto;
+    border-radius: 3px;
+    background-color: wheat;
+    border: 1px solid gray;
 }
 
 .squares {
@@ -31,9 +41,11 @@ body {
 
 .line:not(.line-selected):hover {
     background-color: blue;
+    z-index: 1;
 }
 
 .cell {
     position: absolute;
     border: grey 1px dotted;
+    box-sizing: border-box;
 }

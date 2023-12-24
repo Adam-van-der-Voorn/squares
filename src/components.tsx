@@ -24,8 +24,10 @@ export function App() {
     }
     
     return <div className="content">
-        <Game onWin={setWinState} />
-        { message }
+        <div className="card">
+            <Game onWin={setWinState} />
+            { message }
+        </div>
     </div>
 }
 
@@ -102,6 +104,7 @@ function Line({ x, y, k, selected, horiOrVert, onClick }: any) {
             left: `${(x * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
             width: `${CELL_VISUAL_SIZE + (LINE_VISUAL_RADIUS * 2)}px`,
             height: `${(LINE_VISUAL_RADIUS * 2)}px`,
+            borderRadius: LINE_VISUAL_RADIUS,
         }
     }
     else {
@@ -110,6 +113,7 @@ function Line({ x, y, k, selected, horiOrVert, onClick }: any) {
             left: `${(x * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
             width: `${(LINE_VISUAL_RADIUS * 2)}px`,
             height: `${CELL_VISUAL_SIZE + (LINE_VISUAL_RADIUS * 2)}px`,
+            borderRadius: LINE_VISUAL_RADIUS,
         }
     };
     const clazz = selected ? "line-selected" : ""
