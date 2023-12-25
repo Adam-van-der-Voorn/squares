@@ -9,10 +9,16 @@ const DOT_VISUAL_RADIUS = 2;
 
 export function App() {
     const [winState, setWinState] = useState<any>(null);
+    const [turn, setTurn] = useState<GameProps["turn"]>("p1");
 
     let message;
     if (winState == null) {
-        message = ""
+        if (turn == "p1") {
+            message = `Player one's turn`
+        }
+        else {
+            message = `Player two's turn`
+        }
     }
     else if (winState.winner == `p1`) {
         message = `Player one wins, ${winState.p1}-${winState.p2}!`
@@ -26,16 +32,23 @@ export function App() {
 
     return <div className="content">
         <div className="card">
-            <Game onWin={setWinState} />
-            {message}
+            <Game onWin={setWinState} turn={turn} setTurn={setTurn}/>
+            <div className="message-box">
+                {message}
+            </div>
         </div>
     </div>
 }
 
-function Game({ onWin }: any) {
-    const width = 5, height = 5;
+type GameProps = {
+    turn: "p1" | "p2",
+    setTurn: any,
+    onWin: any
+}
+
+function Game({ onWin, turn, setTurn }: GameProps) {
+    const width = 4, height = 4;
     const [board, setBoard] = useState(() => newBoard(width, height))
-    const [turn, setTurn] = useState<("p1" | "p2")>("p1");
     const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
     useEffect(() => {
@@ -185,7 +198,7 @@ function Game({ onWin }: any) {
         else {
             state = "none"
         }
-        return <Line key={key} dKey={key} x={x} y={y} state={state} horiOrVert={horiOrVert}  />
+        return <Line key={key} dKey={key} x={x} y={y} state={state} horiOrVert={horiOrVert} />
     })
 
     const squaresStyle = {
@@ -193,19 +206,16 @@ function Game({ onWin }: any) {
         height: `${CELL_VISUAL_SIZE * height}px`
     }
 
-    return <>
-        <div className="squares" style={squaresStyle}>
-            {cellsJsx}
-            {linesJsx}
-            {dotsJsx}
-        </div>
-        <div className="panel">{turn}</div>
-    </>
+    return <div className="squares" style={squaresStyle}>
+        {cellsJsx}
+        {linesJsx}
+        {dotsJsx}
+    </div>
 }
 
-type LineProps = { 
+type LineProps = {
     x: number, y: number, dKey: string, state: "none" | "selected" | "hovered", horiOrVert: "h" | "v", onClick?: any
- } 
+}
 
 function Line({ x, y, dKey, state, horiOrVert, onClick }: LineProps) {
     const backgroundColorMap = {

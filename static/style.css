@@ -10,27 +10,32 @@ body {
 }
 
 .card {
-    padding: 40px; /* look nice same as square size*/
+    padding: 32px;
+    padding-bottom: 28px; /* vibes */
     width: fit-content;
     margin: auto;
     border-radius: 3px;
     background-color: wheat;
     border: 1px solid gray;
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: auto;
+    grid-template-areas: 
+      "squares" 
+      "message-box";
+    row-gap: 32px;
 }
 
 .squares {
     position: relative;
     margin: auto;
+    grid-area: squares;
 }
 
 .dot {
     z-index: 2;
     position: absolute;
     background-color: black;
-}
-
-.panel {
-    margin: auto;
 }
 
 .line {
@@ -40,4 +45,15 @@ body {
 .cell {
     position: absolute;
     box-sizing: border-box;
+}
+
+.message-box {
+    position: relative;
+    left: -3px;
+    width: calc(100% - 3px);
+    padding: 4px;
+    border-radius: 3px;
+    background-color: beige;
+    border: grey 1px solid;
+    grid-area: message-box;
 }
