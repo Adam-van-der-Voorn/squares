@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from "react";
-import { newBoard, Board, selectLine, getWinner, boardDimensions } from "./game";
+import { newBoard, Board, selectLine, getWinner, boardDimensions, lineKey } from "./game";
 import { unpack } from "./util";
 
 const CELL_VISUAL_SIZE = 40;
@@ -36,11 +36,53 @@ function Game({ onWin }: any) {
     const width = 5, height = 5;
     const [board, setBoard] = useState(() => newBoard(width, height))
     const [turn, setTurn] = useState<("p1" | "p2")>("p1");
+    const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
-    const clickLine = (ev: any) => {
-        const el: HTMLDivElement = ev.target
-        const key = el.getAttribute("data-key")!;
-        if (board.lines[key].selected) {
+    useEffect(() => {
+        document.addEventListener('mousemove', handleMouseMove)
+        document.addEventListener('click', handleClick)
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove)
+            document.removeEventListener('click', handleClick)
+        }
+    })
+
+    const handleMouseMove = (ev: any) => {
+        const linesDOM = document.querySelectorAll(".line");
+        const mousePos = { x: ev.pageX, y: ev.pageY }
+        const lineCenters = Array.from(linesDOM)
+            .map(el => {
+                const r = el.getBoundingClientRect();
+                return {
+                    key: el.getAttribute("data-key"),
+                    x: r.x + (r.width / 2),
+                    y: r.y + (r.height / 2)
+                }
+            });
+
+        // find closest line to mouse
+        let closestLine: string | null = null;
+        let smallestDist = Number.MAX_SAFE_INTEGER;
+        for (const p of lineCenters) {
+            const distance = Math.sqrt(Math.pow(mousePos.x - p.x, 2) + Math.pow(mousePos.y - p.y, 2))
+            if (distance < smallestDist) {
+                smallestDist = distance;
+                closestLine = p.key;
+            }
+        }
+        console.log(smallestDist, closestLine)
+        if (smallestDist > CELL_VISUAL_SIZE) {
+            closestLine = null
+        }
+        setHoveredLine(closestLine);
+    }
+
+    console.log("sad", hoveredLine)
+
+    const handleClick = () => {
+        const key = hoveredLine;
+        console.log(key)
+        if (!key || board.lines[key].selected) {
             return;
         }
         const newBoard: Board = { ...board }
@@ -132,13 +174,23 @@ function Game({ onWin }: any) {
 
     const linesJsx = Object.entries(board.lines).map(([key, line]) => {
         const { x, y, horiOrVert } = line.key;
-        return <Line key={key} k={key} x={x} y={y} horiOrVert={horiOrVert} onClick={clickLine} selected={line.selected} />
+        let state: LineProps["state"];
+        if (line.selected) {
+            state = "selected"
+        }
+        else if (lineKey(line.key) === hoveredLine) {
+            // line is being 'hovered' over
+            state = "hovered"
+        }
+        else {
+            state = "none"
+        }
+        return <Line key={key} dKey={key} x={x} y={y} state={state} horiOrVert={horiOrVert}  />
     })
 
     const squaresStyle = {
         width: `${CELL_VISUAL_SIZE * width}px`,
         height: `${CELL_VISUAL_SIZE * height}px`
-
     }
 
     return <>
@@ -151,29 +203,44 @@ function Game({ onWin }: any) {
     </>
 }
 
-function Line({ x, y, k, selected, horiOrVert, onClick }: any) {
-    let style: React.CSSProperties;
+type LineProps = { 
+    x: number, y: number, dKey: string, state: "none" | "selected" | "hovered", horiOrVert: "h" | "v", onClick?: any
+ } 
+
+function Line({ x, y, dKey, state, horiOrVert, onClick }: LineProps) {
+    const backgroundColorMap = {
+        "none": "transparent",
+        "selected": "purple",
+        "hovered": "lightgray"
+    };
+
+    let style: React.CSSProperties = {
+        borderRadius: LINE_VISUAL_RADIUS,
+        backgroundColor: backgroundColorMap[state],
+        zIndex: state === "hovered" ? "1" : "0"
+    };
+
     if (horiOrVert === "h") {
         style = {
+            ...style,
             top: `${(y * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
             left: `${(x * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
             width: `${CELL_VISUAL_SIZE + (LINE_VISUAL_RADIUS * 2)}px`,
             height: `${(LINE_VISUAL_RADIUS * 2)}px`,
-            borderRadius: LINE_VISUAL_RADIUS,
         }
     }
     else {
         style = {
+            ...style,
             top: `${(y * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
             left: `${(x * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
             width: `${(LINE_VISUAL_RADIUS * 2)}px`,
             height: `${CELL_VISUAL_SIZE + (LINE_VISUAL_RADIUS * 2)}px`,
-            borderRadius: LINE_VISUAL_RADIUS,
         }
     };
-    const clazz = selected ? "line-selected" : ""
-    return <div className={"line " + clazz}
-        data-key={k}
+
+    return <div className="line"
+        data-key={dKey}
         style={style}
         onClick={onClick}
     ></div>

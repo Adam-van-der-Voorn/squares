@@ -37,19 +37,6 @@ body {
     position: absolute;
 }
 
-.line:not(.line-selected) {
-    background-color: transparent;
-}
-
-.line.line-selected {
-    background-color: rebeccapurple;
-}
-
-.line:not(.line-selected):hover {
-    background-color: blue;
-    z-index: 1;
-}
-
 .cell {
     position: absolute;
     box-sizing: border-box;
