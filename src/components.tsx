@@ -8,6 +8,12 @@ const LINE_VISUAL_RADIUS = 4;
 const DOT_VISUAL_RADIUS = 2;
 
 export function App() {
+    // fake player input
+    const width = 4, height = 4;
+    return Game({ width, height, withAI: false })
+}
+
+export function Game({ width, height, vsAI }: any) {
     const [winState, setWinState] = useState<any>(null);
     const [turn, setTurn] = useState<GameProps["turn"]>("p1");
 
@@ -32,7 +38,7 @@ export function App() {
 
     return <div className="content">
         <div className="card">
-            <Game onWin={setWinState} turn={turn} setTurn={setTurn}/>
+            <Grid onWin={setWinState} turn={turn} setTurn={setTurn} rows={height} cols={width}/>
             <div className="message-box">
                 {message}
             </div>
@@ -41,14 +47,15 @@ export function App() {
 }
 
 type GameProps = {
+    rows: number,
+    cols: number,
     turn: "p1" | "p2",
     setTurn: ReactSetState<GameProps["turn"]>,
     onWin: any
 }
 
-function Game({ onWin, turn, setTurn }: GameProps) {
-    const width = 4, height = 4;
-    const [board, setBoard] = useState(() => newBoard(width, height))
+function Grid({ rows, cols, onWin, turn, setTurn }: GameProps) {
+    const [board, setBoard] = useState(() => newBoard(cols, rows))
     const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
     useEffect(() => {
@@ -198,8 +205,8 @@ function Game({ onWin, turn, setTurn }: GameProps) {
     })
 
     const squaresStyle = {
-        width: `${CELL_VISUAL_SIZE * width}px`,
-        height: `${CELL_VISUAL_SIZE * height}px`
+        width: `${CELL_VISUAL_SIZE * cols}px`,
+        height: `${CELL_VISUAL_SIZE * rows}px`
     }
 
     return <div className="squares" style={squaresStyle}>
