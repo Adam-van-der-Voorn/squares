@@ -10,3 +10,5 @@ export function unpack<T>(arr: T[][]) {
     }
     return flattened;
 }
+
+export type ReactSetState<T> = React.Dispatch<React.SetStateAction<T>>

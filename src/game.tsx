@@ -91,7 +91,6 @@ export function newBoard(width: number, height: number): Board {
         }
 
     }
-    console.log(lines)
     return { cells, lines }
 }
 

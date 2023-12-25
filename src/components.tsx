@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useState } from "react";
 import { newBoard, Board, selectLine, getWinner, boardDimensions, lineKey } from "./game";
-import { unpack } from "./util";
+import { ReactSetState, unpack } from "./util";
 
 const CELL_VISUAL_SIZE = 40;
 const LINE_VISUAL_RADIUS = 4;
@@ -42,7 +42,7 @@ export function App() {
 
 type GameProps = {
     turn: "p1" | "p2",
-    setTurn: any,
+    setTurn: ReactSetState<GameProps["turn"]>,
     onWin: any
 }
 
@@ -83,18 +83,14 @@ function Game({ onWin, turn, setTurn }: GameProps) {
                 closestLine = p.key;
             }
         }
-        console.log(smallestDist, closestLine)
         if (smallestDist > CELL_VISUAL_SIZE) {
             closestLine = null
         }
         setHoveredLine(closestLine);
     }
 
-    console.log("sad", hoveredLine)
-
     const handleClick = () => {
         const key = hoveredLine;
-        console.log(key)
         if (!key || board.lines[key].selected) {
             return;
         }
