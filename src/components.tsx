@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { useState } from "react";
 import { newBoard, Board, selectLine, getWinner, boardDimensions, lineKey } from "./game";
-import { ReactSetState, unpack } from "./util";
+import { ReactSetState, getPxValue, unpack, useWindowDimensions } from "./util";
 
 const CELL_VISUAL_SIZE = 40;
 const LINE_VISUAL_RADIUS = 4;
@@ -9,13 +9,67 @@ const DOT_VISUAL_RADIUS = 2;
 
 export function App() {
     // fake player input
-    const width = 4, height = 4;
+    const width = 6, height = 6;
     return Game({ width, height, withAI: false })
 }
 
 export function Game({ width, height, vsAI }: any) {
     const [winState, setWinState] = useState<any>(null);
-    const [turn, setTurn] = useState<GameProps["turn"]>("p1");
+    const [turn, setTurn] = useState<GridProps["turn"]>("p1");
+    const [style, setStyle] = useState<React.CSSProperties>({ width: "100%", height: "fit-content" })
+    const ref = useRef<HTMLDivElement>(null)
+    const { windowHeight, windowWidth } = useWindowDimensions()
+
+    const rootStyles = getComputedStyle(document.documentElement)
+
+    useLayoutEffect(() => {
+        if (!ref.current) {
+            return;
+        }
+        if (style.width === "100%") {
+            // case 1: card style is configured to work when it is shorter than the window dimensions
+            const clientCard = ref.current.getBoundingClientRect();
+            const maxHeight = windowHeight - (getPxValue(rootStyles, '--body-padding') * 2);
+            if (clientCard.height > maxHeight) {
+                // card is taller then window dimensions, switch case
+                setStyle(prev => ({ ...prev, height: "100%", width: "fit-content" }))
+            }
+        }
+        else {
+            // case 2: card style is configured to work when it is wider than the window dimensions
+            const gridTemplateHeightStr = getComputedStyle(ref.current)
+                .gridTemplateRows
+                .split(' ')?.[0]
+            const gridTemplateHeight = parseInt(gridTemplateHeightStr);
+            const actualGridHeight = ref.current.querySelector(".squares")!
+                .getBoundingClientRect()
+                .height;
+            if (actualGridHeight < gridTemplateHeight) {
+                  // card is taller than it should be, switch case
+                  setStyle(prev => ({ ...prev, height: "fit-content", width: "100%" }))
+            }
+        }
+    }, [windowHeight, windowWidth])
+
+    useLayoutEffect(() => {
+        if (!ref.current) {
+            return;
+        }
+        const cellSize = ref.current.querySelector(".cell")!
+            .getBoundingClientRect()
+            .width;
+
+        if (cellSize) {
+            const padding = cellSize * 0.7;
+            const prevPadding = parseFloat(style.padding as string)
+            if (isNaN(prevPadding) || Math.abs(padding - prevPadding) >= 1) {
+                const paddingPx = `${Math.floor(padding)}px`
+                setStyle(prev => ({ ...prev, "padding": paddingPx, "rowGap": paddingPx }))
+            }
+        }
+    })
+
+    console.log({ windowHeight, windowWidth })
 
     let message;
     if (winState == null) {
@@ -36,25 +90,23 @@ export function Game({ width, height, vsAI }: any) {
         message = `It was a tie, ${winState.p1} all!`
     }
 
-    return <div className="content">
-        <div className="card">
-            <Grid onWin={setWinState} turn={turn} setTurn={setTurn} rows={height} cols={width}/>
-            <div className="message-box">
-                {message}
-            </div>
+    return <div className="card" style={style} ref={ref}>
+        <Grid onWin={setWinState} turn={turn} setTurn={setTurn} rows={height} cols={width} />
+        <div className="message-box">
+            {message}
         </div>
     </div>
 }
 
-type GameProps = {
+type GridProps = {
     rows: number,
     cols: number,
     turn: "p1" | "p2",
-    setTurn: ReactSetState<GameProps["turn"]>,
+    setTurn: ReactSetState<GridProps["turn"]>,
     onWin: any
 }
 
-function Grid({ rows, cols, onWin, turn, setTurn }: GameProps) {
+function Grid({ rows, cols, onWin, turn, setTurn }: GridProps) {
     const [board, setBoard] = useState(() => newBoard(cols, rows))
     const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
@@ -120,135 +172,88 @@ function Grid({ rows, cols, onWin, turn, setTurn }: GameProps) {
         console.groupEnd()
     }
 
-    const cellsJsx = unpack(board.cells).map(({ x, y, val }) => {
-        const key = `cell-${x}-${y}`;
-        return <div className={key + " cell"}
-            key={key}
-            style={{
-                top: `${y * CELL_VISUAL_SIZE}px`,
-                left: `${x * CELL_VISUAL_SIZE}px`,
-                width: `${CELL_VISUAL_SIZE}px`,
-                height: `${CELL_VISUAL_SIZE}px`,
-            }}
-        >
-            {val.claim ?? ""}
-        </div>
-    })
-
-    const dotsJsx = unpack(board.cells).flatMap(({ x, y }) => {
-        const dots = []
-        const baseStyle = {
-            width: `${DOT_VISUAL_RADIUS * 2}px`,
-            height: `${DOT_VISUAL_RADIUS * 2}px`,
-            borderRadius: `${DOT_VISUAL_RADIUS}px`
-        }
-        const brDot = <div className={"dot"}
-            key={`dot-br-${x}-${y}`}
-            style={{
-                ...baseStyle,
-                top: `${(y * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
-                left: `${(x * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
-            }}
-        ></div>
-        dots.push(brDot);
-        if (x === 0 || y === 0) {
-            const tlDot = <div className={"dot"}
-                key={`dot-tl-${x}-${y}`}
-                style={{
-                    ...baseStyle,
-                    top: `${(y * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
-                    left: `${(x * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
-                }}
-            ></div>
-            dots.push(tlDot)
-        }
-        const { rows, cols } = boardDimensions(board);
-        if (x === 0 && y === rows - 1) {
-            const blDot = <div className={"dot"}
-                key={`dot-bl-${x}-${y}`}
-                style={{
-                    ...baseStyle,
-                    top: `${(y * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
-                    left: `${(x * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
-                }}
-            ></div>
-            dots.push(blDot)
-        }
-        if (y === 0 && x === cols - 1) {
-            const trDot = <div className={"dot"}
-                key={`dot-tr-${x}-${y}`}
-                style={{
-                    ...baseStyle,
-                    top: `${(y * CELL_VISUAL_SIZE) - DOT_VISUAL_RADIUS}px`,
-                    left: `${(x * CELL_VISUAL_SIZE) + CELL_VISUAL_SIZE - DOT_VISUAL_RADIUS}px`,
-                }}
-            ></div>
-            dots.push(trDot)
-        }
-        return dots;
-    })
-
-    const linesJsx = Object.entries(board.lines).map(([key, line]) => {
-        const { x, y, horiOrVert } = line.key;
+    const getLineJsx = (key: string, offsetX = 0, offsetY = 0) => {
+        const line = board.lines[key];
+        const { horiOrVert } = line.key;
         let state: LineProps["state"];
         if (line.selected) {
             state = "selected"
         }
-        else if (lineKey(line.key) === hoveredLine) {
+        else if (key === hoveredLine) {
             // line is being 'hovered' over
             state = "hovered"
         }
         else {
             state = "none"
         }
-        return <Line key={key} dKey={key} x={x} y={y} state={state} horiOrVert={horiOrVert} />
+        return <Line key={key} dKey={key} offsetX={offsetX} offsetY={offsetY} state={state} horiOrVert={horiOrVert} />
+    }
+
+    const cellsJsx = unpack(board.cells).map(({ x, y, val: cell }) => {
+        const linesJsx = cell.lines.flatMap(k => {
+            const lines = []
+            const line = board.lines[k];
+            if (line.key.x === x && line.key.y === y) {
+                // tl lines
+                lines.push(getLineJsx(k))
+            }
+            if ((x === cols - 1 || y === rows - 1) && (line.key.x === cols || line.key.y === rows)) {
+                // br lines, br cells
+                lines.push(getLineJsx(k, 1, 1))
+            }
+            return lines;
+        })
+
+        return <div className="cell" key={`cell-${x}-${y}`}>
+            {linesJsx}
+            <Dots x={x} y={y} boardRows={rows} boardCols={cols} />
+            {cell.claim ?? ""}
+        </div>
     })
 
     const squaresStyle = {
-        width: `${CELL_VISUAL_SIZE * cols}px`,
-        height: `${CELL_VISUAL_SIZE * rows}px`
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        aspectRatio: `${cols} / ${rows}`
     }
 
     return <div className="squares" style={squaresStyle}>
         {cellsJsx}
-        {linesJsx}
-        {dotsJsx}
     </div>
 }
 
 type LineProps = {
-    x: number, y: number, dKey: string, state: "none" | "selected" | "hovered", horiOrVert: "h" | "v", onClick?: any
+    offsetX: number, offsetY: number, dKey: string, state: "none" | "selected" | "hovered", horiOrVert: "h" | "v", onClick?: any
 }
 
-function Line({ x, y, dKey, state, horiOrVert, onClick }: LineProps) {
+function Line({ offsetX, offsetY, dKey, state, horiOrVert, onClick }: LineProps) {
     const backgroundColorMap = {
         "none": "transparent",
-        "selected": "purple",
+        "selected": "black",
         "hovered": "lightgray"
     };
 
     let style: React.CSSProperties = {
         borderRadius: LINE_VISUAL_RADIUS,
         backgroundColor: backgroundColorMap[state],
-        zIndex: state === "hovered" ? "1" : "0"
     };
 
     if (horiOrVert === "h") {
         style = {
             ...style,
-            top: `${(y * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
-            left: `${(x * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
-            width: `${CELL_VISUAL_SIZE + (LINE_VISUAL_RADIUS * 2)}px`,
-            height: `${(LINE_VISUAL_RADIUS * 2)}px`,
+            top: `calc((${offsetY} * 100%) - var(--line-radius))`,
+            left: `calc(0px - var(--line-radius))`,
+            width: `calc(100% + (var(--line-radius) * 2))`,
+            height: `calc(var(--line-radius) * 2)`,
         }
     }
     else {
         style = {
             ...style,
-            top: `${(y * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
-            left: `${(x * CELL_VISUAL_SIZE) - LINE_VISUAL_RADIUS}px`,
-            width: `${(LINE_VISUAL_RADIUS * 2)}px`,
-            height: `${CELL_VISUAL_SIZE + (LINE_VISUAL_RADIUS * 2)}px`,
+            top: `calc(0px - var(--line-radius))`,
+            left: `calc((${offsetX} * 100%) - var(--line-radius))`,
+            width: `calc(var(--line-radius) * 2)`,
+            height: `calc(100% + (var(--line-radius) * 2))`,
         }
     };
 
@@ -257,4 +262,52 @@ function Line({ x, y, dKey, state, horiOrVert, onClick }: LineProps) {
         style={style}
         onClick={onClick}
     ></div>
+}
+
+type DotProps = {
+    x: number, y: number, boardRows: number, boardCols: number
+}
+
+function Dots({ x, y, boardRows, boardCols }: DotProps) {
+    const dots = []
+    const brDot = <div className={"dot"}
+        key={`dot-br`}
+        style={{
+            top: `calc(100% - var(--dot-radius))`,
+            left: `calc(100% - var(--dot-radius))`,
+        }}
+    ></div>
+    dots.push(brDot);
+    if (x === 0 || y === 0) {
+        const tlDot = <div className={"dot"}
+            key={`dot-tl`}
+            style={{
+                top: `calc(0px - var(--dot-radius))`,
+                left: `calc(0px - var(--dot-radius))`,
+            }}
+        ></div>
+        dots.push(tlDot)
+    }
+
+    if (x === 0 && y === boardRows - 1) {
+        const blDot = <div className={"dot"}
+            key={`dot-bl`}
+            style={{
+                top: `calc(100% - var(--dot-radius))`,
+                left: `calc(0px - var(--dot-radius))`,
+            }}
+        ></div>
+        dots.push(blDot)
+    }
+    if (y === 0 && x === boardCols - 1) {
+        const trDot = <div className={"dot"}
+            key={`dot-tr`}
+            style={{
+                top: `calc(0px - var(--dot-radius))`,
+                left: `calc(100% - var(--dot-radius))`,
+            }}
+        ></div>
+        dots.push(trDot)
+    }
+    return dots;
 }

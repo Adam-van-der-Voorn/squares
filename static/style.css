@@ -1,49 +1,61 @@
-body {
+:root {
+    --card-row-gap: 32px;
+    --body-padding: 8px;
+    --line-radius: 2px;
+    --dot-radius: 4px;
+    --msg-box-height: 30px;
+}
+
+html, body {
     padding: 0;
     margin: 0;
     background-color: pink;
+    height: 100%;
 }
 
-.content {
-    padding: 16px;
-
+#react-root {
+    padding: var(--body-padding);
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .card {
-    padding: 32px;
-    padding-bottom: 28px; /* vibes */
-    width: fit-content;
+    border-radius: 20px;
+    background-color: rgb(255, 213, 219);
     margin: auto;
-    border-radius: 3px;
-    background-color: wheat;
-    border: 1px solid gray;
     display: grid;
-    grid-template-rows: auto auto;
-    grid-template-columns: auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 
       "squares" 
       "message-box";
-    row-gap: 32px;
+    row-gap: var(--card-row-gap);
+    box-sizing: border-box;
 }
 
 .squares {
-    position: relative;
-    margin: auto;
+    display: grid;
     grid-area: squares;
+    max-height: 100%;
+    padding: var(--dot-radius);
 }
 
 .dot {
     z-index: 2;
     position: absolute;
     background-color: black;
+    width: calc(var(--dot-radius) * 2);
+    height: calc(var(--dot-radius) * 2);
+    border-radius: var(--dot-radius);
 }
 
 .line {
     position: absolute;
+    z-index: 1;
 }
 
 .cell {
-    position: absolute;
+    position: relative;
     box-sizing: border-box;
 }
 
