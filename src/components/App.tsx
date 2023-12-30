@@ -1,12 +1,19 @@
 import React, { useState } from "react";
 import { Game } from "./Game";
+import { Menu } from "./Menu";
 
-type AppState = "menu" | "game";
+type AppState =
+"menu" |
+{ name: "game", width: number, height: number, withAI: boolean };
 
 export function App() {
     const [appState, setAppState] = useState<AppState>("menu");
-    
-    // fake player input
-    const width = 6, height = 6;
-    return Game({ width, height, withAI: false })
+
+    if (appState === "menu") {
+        return <Menu onStart={(width, height, withAI) => setAppState({ name: "game", width, height, withAI })}/>
+    }
+    else {
+        const { width, height, withAI } = appState;
+        return <Game width={width} height={height} vsAI={withAI} />
+    }
 }
