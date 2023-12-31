@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useState } from "react";
-import { newBoard, Board, selectLine, getWinner } from "../game";
+import { selectLine, getWinner, SquaresGame } from "../game";
 import { ReactSetState, unpack } from "../util";
 import { Line, Props as LineProps } from "./Line";
 import { Dots } from "./Dots";
@@ -10,13 +10,12 @@ const CELL_VISUAL_SIZE = 40;
 export type Props = {
     rows: number,
     cols: number,
-    turn: "p1" | "p2",
-    setTurn: ReactSetState<Props["turn"]>,
+    squaresGame: SquaresGame,
+    setSquaresGame: ReactSetState<SquaresGame>,
     onWin: any
 }
 
-export function Grid({ rows, cols, onWin, turn, setTurn }: Props) {
-    const [board, setBoard] = useState(() => newBoard(cols, rows))
+export function Grid({ rows, cols, onWin, squaresGame, setSquaresGame }: Props) {
     const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
     useEffect(() => {
@@ -59,22 +58,17 @@ export function Grid({ rows, cols, onWin, turn, setTurn }: Props) {
 
     const handleClick = () => {
         const key = hoveredLine;
-        if (!key || board.lines[key].selected) {
+        if (!key || squaresGame.board.lines[key].selected) {
             return;
         }
-        const newBoard: Board = { ...board }
         console.group("Line :", key)
 
         // prev
-        let newClaimedSquares = selectLine(newBoard, key, turn);
+        let newClaimedSquares = selectLine(squaresGame, key);
         console.log("new claimed =", newClaimedSquares)
 
-        setBoard(newBoard)
-        if (newClaimedSquares === 0) {
-            console.log("switching turn")
-            setTurn(t => t === "p1" ? "p2" : "p1")
-        }
-        const winner = getWinner(newBoard);
+        setSquaresGame({... squaresGame})
+        const winner = getWinner(squaresGame.board);
         if (winner) {
             onWin(winner)
         }
@@ -82,7 +76,7 @@ export function Grid({ rows, cols, onWin, turn, setTurn }: Props) {
     }
 
     const getLineJsx = (key: string, offsetX = 0, offsetY = 0) => {
-        const line = board.lines[key];
+        const line = squaresGame.board.lines[key];
         const { horiOrVert } = line.key;
         let state: LineProps["state"];
         if (line.selected) {
@@ -98,10 +92,10 @@ export function Grid({ rows, cols, onWin, turn, setTurn }: Props) {
         return <Line key={key} dKey={key} offsetX={offsetX} offsetY={offsetY} state={state} horiOrVert={horiOrVert} />
     }
 
-    const cellsJsx = unpack(board.cells).map(({ x, y, val: cell }) => {
+    const cellsJsx = unpack(squaresGame.board.cells).map(({ x, y, val: cell }) => {
         const linesJsx = cell.lines.flatMap(k => {
             const lines = []
-            const line = board.lines[k];
+            const line = squaresGame.board.lines[k];
             if (line.key.x === x && line.key.y === y) {
                 // tl lines
                 lines.push(getLineJsx(k))

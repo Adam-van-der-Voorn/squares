@@ -25,6 +25,11 @@ export type Board = {
     cells: Cell[][]
 }
 
+export type SquaresGame = {
+    turn: PlayerKey,
+    board: Board,
+}
+
 function newUninitalisedLine(key: LineKey): Line {
     return {
         key,
@@ -33,20 +38,20 @@ function newUninitalisedLine(key: LineKey): Line {
     }
 }
 
-export function newBoard(width: number, height: number): Board {
+function newBoard(numCellsX: number, numCellsY: number): Board {
     const lines: Record<string, Line> = {}
 
     // vertical lines
-    for (let rowi = 0; rowi < height; rowi++) {
-        for (let coli = 0; coli < width + 1; coli++) {
+    for (let rowi = 0; rowi < numCellsY; rowi++) {
+        for (let coli = 0; coli < numCellsX + 1; coli++) {
             const key: LineKey = { x: coli, y: rowi, horiOrVert: "v" }
             lines[lineKey(key)] = newUninitalisedLine(key)
         }
     }
 
     // horizontal lines
-    for (let rowi = 0; rowi < height + 1; rowi++) {
-        for (let coli = 0; coli < width; coli++) {
+    for (let rowi = 0; rowi < numCellsY + 1; rowi++) {
+        for (let coli = 0; coli < numCellsX; coli++) {
             const key: LineKey = { x: coli, y: rowi, horiOrVert: "h" }
             lines[lineKey(key)] = newUninitalisedLine(key)
         }
@@ -54,10 +59,10 @@ export function newBoard(width: number, height: number): Board {
 
     // cells
     const cells: Cell[][] = []
-    for (let rowi = 0; rowi < height; rowi++) {
+    for (let rowi = 0; rowi < numCellsY; rowi++) {
         const row: Cell[] = []
         cells.push(row)
-        for (let coli = 0; coli < width; coli++) {
+        for (let coli = 0; coli < numCellsX; coli++) {
             const n = lineKey({ x: coli, y: rowi, horiOrVert: "h" });
             const e = lineKey({ x: coli + 1, y: rowi, horiOrVert: "v" });
             const s = lineKey({ x: coli, y: rowi + 1, horiOrVert: "h" });
@@ -94,6 +99,13 @@ export function newBoard(width: number, height: number): Board {
     return { cells, lines }
 }
 
+export function newGame(numCellsX: number, numCellsY: number): SquaresGame {
+    return {
+        board: newBoard(numCellsX, numCellsY),
+        turn: "p1"
+    }
+}
+
 export function boardDimensions(board: Board): { rows: number, cols: number } {
     return {
         // rows are inner arrays
@@ -114,25 +126,27 @@ export function numClaimedSquaresForLine(board: Board, lineKey: string): number 
     return numClaimed;
 }
 
-export function selectLine(board: Board, lineKey: string, player: PlayerKey): number {
-    board.lines[lineKey].selected = true;
+export function selectLine(game: SquaresGame, lineKey: string): void {
+    game.board.lines[lineKey].selected = true;
     let newClaimedSquares = 0;
-    for (const {x, y} of board.lines[lineKey].cells) {
+    for (const {x, y} of game.board.lines[lineKey].cells) {
         console.log("checking cell x:", x, ", y:", y)
-        const cell = board.cells[y][x];       
+        const cell = game.board.cells[y][x];       
         if (cell.claim == null) {
             const isSurrounded = cell.lines.every(lk => {
-                const l = board.lines[lk];
+                const l = game.board.lines[lk];
                 console.log("line", lk, "selected?", l.selected)
                 return l.selected === true
             });
             if (isSurrounded) {
-                cell.claim = player;
+                cell.claim = game.turn;
                 newClaimedSquares += 1;
             }
         }
     }
-    return newClaimedSquares;
+    if (newClaimedSquares === 0) {
+        game.turn = game.turn === "p1" ? "p2" : "p1";
+    }
 }
 
 export function getWinner(board: Board) {

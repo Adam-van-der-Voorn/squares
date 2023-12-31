@@ -2,10 +2,11 @@ import React, { useLayoutEffect, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
 import { Grid, Props as GridProps} from "./Grid";
+import { SquaresGame, newGame } from "../game";
 
 export function Game({ width, height, vsAI }: any) {
     const [winState, setWinState] = useState<any>(null);
-    const [turn, setTurn] = useState<GridProps["turn"]>("p1");
+    const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))
     const [style, setStyle] = useState<React.CSSProperties>({ width: "100%", height: "fit-content" })
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
@@ -63,7 +64,7 @@ export function Game({ width, height, vsAI }: any) {
 
     let message;
     if (winState == null) {
-        if (turn == "p1") {
+        if (squaresGame.turn == "p1") {
             message = `Player one's turn`
         }
         else {
@@ -81,7 +82,7 @@ export function Game({ width, height, vsAI }: any) {
     }
 
     return <div className="card" style={style} ref={ref}>
-        <Grid onWin={setWinState} turn={turn} setTurn={setTurn} rows={height} cols={width} />
+        <Grid onWin={setWinState} squaresGame={squaresGame} setSquaresGame={setSquaresGame} rows={height} cols={width} />
         <div className="message-box">
             {message}
         </div>
