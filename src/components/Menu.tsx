@@ -24,8 +24,7 @@ export function Menu({ onStart }: Props) {
         set(val)
     }
 
-    const handleSumbit = (ev: React.ChangeEvent<HTMLFormElement>) => {
-        ev.preventDefault();
+    const handleSumbit = ({ withAI }: { withAI: boolean}) => {
         const msg = "Pretty big board bro. You wanna go there?";
         if (isSubmitAllowed === "ask" && !confirm(msg)) {
             return;
@@ -33,7 +32,7 @@ export function Menu({ onStart }: Props) {
         // ok so
         // we minus 1 from each varible as the varibles represent the number of cells
         // but it makes more sense to be th number of dots
-        onStart(widthNum - 1, heightNum - 1, false)
+        onStart(widthNum - 1, heightNum - 1, withAI)
     }
 
     let isSubmitAllowed: true | false | "ask";
@@ -42,18 +41,16 @@ export function Menu({ onStart }: Props) {
     }
     else if (widthNum > MAX_DOTS || heightNum > MAX_DOTS) {
         isSubmitAllowed = "ask";
-
     }
     else {
         isSubmitAllowed = true;
     }
 
     return <div>
-        <form onSubmit={handleSumbit}>
-            <input type="text" name="width" value={width} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setWidth)} />
-            <input type="text" name="width" value={height} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setHeight)} />
-            <input type="submit" disabled={isSubmitAllowed === false} />
-        </form>
+        <input type="text" name="width" value={width} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setWidth)} />
+        <input type="text" name="width" value={height} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setHeight)} />
+        <button disabled={isSubmitAllowed === false} onClick={() => handleSumbit({withAI: true})}>Play the computer</button>
+        <button disabled={isSubmitAllowed === false} onClick={() => handleSumbit({withAI: false})}>Two player game</button>
     </div>
 
 }
