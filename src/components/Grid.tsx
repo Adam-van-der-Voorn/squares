@@ -8,14 +8,18 @@ import { Dots } from "./Dots";
 const CELL_VISUAL_SIZE = 40;
 
 export type Props = {
-    rows: number,
+    rows: number;
     cols: number,
+    enabled: boolean
     squaresGame: SquaresGame,
     setSquaresGame: ReactSetState<SquaresGame>,
 }
 
-export function Grid({ rows, cols, squaresGame, setSquaresGame }: Props) {
-    const [hoveredLine, setHoveredLine] = useState<string | null>(null)
+export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props) {
+    let [hoveredLine, setHoveredLine] = useState<string | null>(null)
+    if (!enabled) {
+        hoveredLine = null;
+    }
 
     useEffect(() => {
         document.addEventListener('mousemove', handleMouseMove)

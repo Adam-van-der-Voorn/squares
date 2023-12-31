@@ -1,8 +1,9 @@
-import React, { useLayoutEffect, useMemo, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
-import { SquaresGame, getWinner, newGame } from "../game";
+import { SquaresGame, getWinner, newGame, selectLine } from "../game";
+import { doAiMove } from "../ai";
 
 export function Game({ width, height, vsAI }: any) {
     const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))
@@ -59,6 +60,15 @@ export function Game({ width, height, vsAI }: any) {
         }
     })
 
+    useEffect(() => {
+        if (vsAI && squaresGame.turn === "p2") {
+            setTimeout(() => {
+                doAiMove(squaresGame)
+                setSquaresGame({...squaresGame});
+            }, 500)
+        }
+    }, [squaresGame])
+
     const winState = useMemo(() => getWinner(squaresGame.board), [squaresGame])
 
     let message;
@@ -80,8 +90,10 @@ export function Game({ width, height, vsAI }: any) {
         message = `It was a tie, ${winState.p1} all!`
     }
 
+    const gridIsEnabled = !vsAI || squaresGame.turn === "p1";
+
     return <div className="card" style={style} ref={ref}>
-        <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} rows={height} cols={width} />
+        <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} enabled={gridIsEnabled} rows={height} cols={width} />
         <div className="message-box">
             {message}
         </div>
