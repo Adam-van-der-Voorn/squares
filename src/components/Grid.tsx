@@ -12,10 +12,9 @@ export type Props = {
     cols: number,
     squaresGame: SquaresGame,
     setSquaresGame: ReactSetState<SquaresGame>,
-    onWin: any
 }
 
-export function Grid({ rows, cols, onWin, squaresGame, setSquaresGame }: Props) {
+export function Grid({ rows, cols, squaresGame, setSquaresGame }: Props) {
     const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
     useEffect(() => {
@@ -68,10 +67,6 @@ export function Grid({ rows, cols, onWin, squaresGame, setSquaresGame }: Props) 
         console.log("new claimed =", newClaimedSquares)
 
         setSquaresGame({... squaresGame})
-        const winner = getWinner(squaresGame.board);
-        if (winner) {
-            onWin(winner)
-        }
         console.groupEnd()
     }
 

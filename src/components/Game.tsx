@@ -1,11 +1,10 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
-import { Grid, Props as GridProps} from "./Grid";
-import { SquaresGame, newGame } from "../game";
+import { Grid } from "./Grid";
+import { SquaresGame, getWinner, newGame } from "../game";
 
 export function Game({ width, height, vsAI }: any) {
-    const [winState, setWinState] = useState<any>(null);
     const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))
     const [style, setStyle] = useState<React.CSSProperties>({ width: "100%", height: "fit-content" })
     const ref = useRef<HTMLDivElement>(null)
@@ -60,7 +59,7 @@ export function Game({ width, height, vsAI }: any) {
         }
     })
 
-    console.log({ windowHeight, windowWidth })
+    const winState = useMemo(() => getWinner(squaresGame.board), [squaresGame])
 
     let message;
     if (winState == null) {
@@ -82,7 +81,7 @@ export function Game({ width, height, vsAI }: any) {
     }
 
     return <div className="card" style={style} ref={ref}>
-        <Grid onWin={setWinState} squaresGame={squaresGame} setSquaresGame={setSquaresGame} rows={height} cols={width} />
+        <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} rows={height} cols={width} />
         <div className="message-box">
             {message}
         </div>
