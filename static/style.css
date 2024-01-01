@@ -51,6 +51,7 @@ html, body {
 
 .line {
     position: absolute;
+    border-radius: var(--line-radius);
     z-index: 1;
 }
 

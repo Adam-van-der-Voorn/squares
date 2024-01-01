@@ -1,7 +1,5 @@
 import React from "react";
 
-const LINE_VISUAL_RADIUS = 4;
-
 export type Props = {
     offsetX: number, offsetY: number, dKey: string, state: "none" | "selected" | "hovered", horiOrVert: "h" | "v", onClick?: any
 }
@@ -14,7 +12,6 @@ export function Line({ offsetX, offsetY, dKey, state, horiOrVert, onClick }: Pro
     };
 
     let style: React.CSSProperties = {
-        borderRadius: LINE_VISUAL_RADIUS,
         backgroundColor: backgroundColorMap[state],
     };
 

@@ -5,8 +5,6 @@ import { ReactSetState, unpack } from "../util";
 import { Line, Props as LineProps } from "./Line";
 import { Dots } from "./Dots";
 
-const CELL_VISUAL_SIZE = 40;
-
 export type Props = {
     rows: number;
     cols: number,
@@ -33,6 +31,11 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
     const handleMouseMove = (ev: any) => {
         const linesDOM = document.querySelectorAll(".line");
         const mousePos = { x: ev.pageX, y: ev.pageY }
+        const lineRect = linesDOM.item(0)?.getBoundingClientRect();
+        if (!lineRect) {
+            return;
+        }
+        const lineLength = Math.max(lineRect.height, lineRect.width);
         const lineCenters = Array.from(linesDOM)
             .map(el => {
                 const r = el.getBoundingClientRect();
@@ -53,7 +56,7 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
                 closestLine = p.key;
             }
         }
-        if (smallestDist > CELL_VISUAL_SIZE) {
+        if (smallestDist > lineLength) {
             closestLine = null
         }
         setHoveredLine(closestLine);
