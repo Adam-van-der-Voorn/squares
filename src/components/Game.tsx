@@ -46,17 +46,15 @@ export function Game({ width, height, vsAI }: any) {
         if (!ref.current) {
             return;
         }
-        const cellSize = ref.current.querySelector(".cell")!
+        const cardWidthPx = ref.current
             .getBoundingClientRect()
             .width;
-
-        if (cellSize) {
-            const padding = cellSize * 0.7;
-            const prevPadding = parseFloat(style.padding as string)
-            if (isNaN(prevPadding) || Math.abs(padding - prevPadding) >= 1) {
-                const paddingPx = `${Math.floor(padding)}px`
-                setStyle(prev => ({ ...prev, "padding": paddingPx, "rowGap": paddingPx }))
-            }
+        const x = cardWidthPx / (width + 2);
+        const padding = x * 0.7;
+        const prevPadding = parseFloat(style.padding as string)
+        if (isNaN(prevPadding) || Math.abs(padding - prevPadding) >= 1) {
+            const paddingPx = `${Math.floor(padding)}px`
+            setStyle(prev => ({ ...prev, "padding": paddingPx, "rowGap": paddingPx }))
         }
     })
 

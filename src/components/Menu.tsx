@@ -4,7 +4,7 @@ export type Props = {
     onStart: (width: number, height: number, vsAi: boolean) => void
 }
 
-const MIN_DOTS = 4, MAX_DOTS = 30;
+const MIN_DOTS = 2, MAX_DOTS = 30;
 
 export function Menu({ onStart }: Props) {
     const [width, setWidth] = useState("6");
