@@ -42,7 +42,7 @@ export function Game({ width, height, vsAI }: any) {
         }
     }, [windowHeight, windowWidth])
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         if (!ref.current) {
             return;
         }
@@ -51,10 +51,16 @@ export function Game({ width, height, vsAI }: any) {
             .width;
         const x = cardWidthPx / (width + 2);
         const padding = x * 0.7;
-        const prevPadding = parseFloat(style.padding as string)
-        if (isNaN(prevPadding) || Math.abs(padding - prevPadding) >= 1) {
-            const paddingPx = `${Math.floor(padding)}px`
-            setStyle(prev => ({ ...prev, "padding": paddingPx, "rowGap": paddingPx }))
+        const prevPaddingLeft = parseFloat(style.paddingLeft as string)
+        if (isNaN(prevPaddingLeft) || Math.abs(padding - prevPaddingLeft) >= 1) {
+            const lesserPadding = x * 0.5;            
+            setStyle(prev => ({ ...prev,
+                "paddingTop": `${Math.floor(padding)}px`,
+                "paddingRight": `${Math.floor(padding)}px`,
+                "paddingBottom": `${Math.floor(lesserPadding)}px`,
+                "paddingLeft": `${Math.floor(padding)}px`,
+                "rowGap": `${Math.floor(padding)}px`
+            }))
         }
     })
 
