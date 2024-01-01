@@ -4,6 +4,7 @@
     --line-radius: 2px;
     --dot-radius: 4px;
     --msg-box-height: 30px;
+    font-family: 'Arial Narrow', Arial, sans-serif;
 }
 
 html, body {
@@ -62,11 +63,13 @@ html, body {
 
 .message-box {
     position: relative;
-    left: -3px;
-    width: calc(100% - 3px);
-    padding: 4px;
-    border-radius: 3px;
-    background-color: beige;
-    border: grey 1px solid;
+    left: -8px;
+    /* I have no fucking idea why you need the +1px here, but it's needed */
+    width: calc(100% + 1px);
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 999px; /* rounded */
+    background-color: rgb(255, 232, 239);
     grid-area: message-box;
+    font-size: 24px;
 }
