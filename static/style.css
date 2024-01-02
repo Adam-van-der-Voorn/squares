@@ -1,9 +1,7 @@
 :root {
-    --card-row-gap: 32px;
     --body-padding: 8px;
     --line-radius: 2px;
     --dot-radius: 4px;
-    --msg-box-height: 30px;
     font-family: 'Arial Narrow', Arial, sans-serif;
 }
 
@@ -25,12 +23,12 @@ html, body {
     background-color: rgb(255, 213, 219);
     margin: auto;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto auto;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 
-      "squares" 
+      "squares"
+      "scores"
       "message-box";
-    row-gap: var(--card-row-gap);
     box-sizing: border-box;
 }
 
@@ -72,4 +70,48 @@ html, body {
     background-color: rgb(255, 232, 239);
     grid-area: message-box;
     font-size: 24px;
+}
+
+.scores {
+    display: grid;
+    grid-template-rows: auto;
+    grid-template-columns: 1fr 1fr;
+    row-gap: 30px;
+    box-sizing: border-box;
+}
+
+.player-details {
+   
+}
+
+.player-details-2 {
+    display: flex;
+}
+
+.player-img {
+    width: 60px;
+    height: 90px;
+    object-fit: fill;
+    grid-area: image;
+    padding: 0;
+    margin: 0;
+}
+
+.player-score {
+    /* 0 line height stops the large test from pusing down other elements */
+    line-height: 0;
+    position: relative;
+    bottom: -68px;
+    font-weight: normal;
+    font-size: 60px;
+    grid-area: score;
+    padding: 0 16px;
+    margin: 0;
+}
+
+.player-name {
+    grid-area: name;
+    padding: 8px 0 0 0;
+    margin: 0;
+    font-size: 22px;
 }

@@ -36,8 +36,8 @@ export function Game({ width, height, vsAI }: any) {
                 .getBoundingClientRect()
                 .height;
             if (actualGridHeight < gridTemplateHeight) {
-                  // card is taller than it should be, switch case
-                  setStyle(prev => ({ ...prev, height: "fit-content", width: "100%" }))
+                // card is taller than it should be, switch case
+                setStyle(prev => ({ ...prev, height: "fit-content", width: "100%" }))
             }
         }
     }, [windowHeight, windowWidth])
@@ -53,8 +53,9 @@ export function Game({ width, height, vsAI }: any) {
         const padding = x * 0.7;
         const prevPaddingLeft = parseFloat(style.paddingLeft as string)
         if (isNaN(prevPaddingLeft) || Math.abs(padding - prevPaddingLeft) >= 1) {
-            const lesserPadding = x * 0.5;            
-            setStyle(prev => ({ ...prev,
+            const lesserPadding = x * 0.5;
+            setStyle(prev => ({
+                ...prev,
                 "paddingTop": `${Math.floor(padding)}px`,
                 "paddingRight": `${Math.floor(padding)}px`,
                 "paddingBottom": `${Math.floor(lesserPadding)}px`,
@@ -68,7 +69,7 @@ export function Game({ width, height, vsAI }: any) {
         if (vsAI && squaresGame.turn === "p2") {
             setTimeout(() => {
                 doAiMove(squaresGame)
-                setSquaresGame({...squaresGame});
+                setSquaresGame({ ...squaresGame });
             }, 500)
         }
     }, [squaresGame])
@@ -96,10 +97,36 @@ export function Game({ width, height, vsAI }: any) {
 
     const gridIsEnabled = !vsAI || squaresGame.turn === "p1";
 
+    const cat = "https://upload.wikimedia.org/wikipedia/commons/4/44/Cat_img.jpg"
+
     return <div className="card" style={style} ref={ref}>
         <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} enabled={gridIsEnabled} rows={height} cols={width} />
+        <div className="scores">
+            <div className="player-details">
+                <div className="player-details-2">
+                    <img className="player-img" src={cat}></img>
+                    <p className="player-score">{0}</p>
+                </div>
+                <p className="player-name" >{"Player one"}</p>
+            </div>
+            <div className="player-details">
+                <div className="player-details-2" style={{ "justifyContent": "right"}}>
+                    <p className="player-score">{0}</p>
+                    <img className="player-img" src={cat}></img>
+                </div>
+                <p className="player-name" style={{ "textAlign": "right"}}>{"Player two"}</p>
+            </div>
+        </div>
         <div className="message-box">
             {message}
         </div>
+    </div>
+}
+
+function PlayerBox({ score, imgUrl, name }: any) {
+    return <div className="player-details">
+        <img className="player-img" src={imgUrl}></img>
+        <p className="player-score">{score}</p>
+        <p className="player-name">{name}</p>
     </div>
 }
