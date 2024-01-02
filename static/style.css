@@ -57,6 +57,7 @@ html, body {
 .cell {
     position: relative;
     box-sizing: border-box;
+    padding: calc(var(--dot-radius) * 2);
 }
 
 .message-box {

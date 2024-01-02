@@ -149,12 +149,8 @@ export function selectLine(game: SquaresGame, lineKey: string): void {
     }
 }
 
-export function getWinner(board: Board) {
+export function getScores(board: Board) {
     const cells = unpack(board.cells).map(c => c.val)
-    const isWon = cells.every(c => c.claim !== null);
-    if (!isWon) {
-        return null;
-    }
 
     // count claims
     const claims = { p1: 0, p2: 0}
@@ -163,7 +159,11 @@ export function getWinner(board: Board) {
     }
     
     let winner
-    if (claims.p1 > claims.p2) {
+    const isWon = cells.every(c => c.claim !== null);
+    if (!isWon) {
+        winner = null;
+    }
+    else if (claims.p1 > claims.p2) {
         winner = "p1"
     }
     else if (claims.p1 < claims.p2) {

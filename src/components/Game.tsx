@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
-import { SquaresGame, getWinner, newGame, selectLine } from "../game";
+import { SquaresGame, getScores, newGame, selectLine } from "../game";
 import { doAiMove } from "../ai";
 
 export function Game({ width, height, vsAI }: any) {
@@ -74,10 +74,10 @@ export function Game({ width, height, vsAI }: any) {
         }
     }, [squaresGame])
 
-    const winState = useMemo(() => getWinner(squaresGame.board), [squaresGame])
+    const scores = useMemo(() => getScores(squaresGame.board), [squaresGame])
 
     let message;
-    if (winState == null) {
+    if (scores.winner == null) {
         if (squaresGame.turn == "p1") {
             message = `Player one's turn`
         }
@@ -85,14 +85,14 @@ export function Game({ width, height, vsAI }: any) {
             message = `Player two's turn`
         }
     }
-    else if (winState.winner == `p1`) {
-        message = `Player one wins, ${winState.p1}-${winState.p2}!`
+    else if (scores.winner == `p1`) {
+        message = `Player one wins, ${scores.p1}-${scores.p2}!`
     }
-    else if (winState.winner == `p2`) {
-        message = `Player two wins, ${winState.p2}-${winState.p1}!`
+    else if (scores.winner == `p2`) {
+        message = `Player two wins, ${scores.p2}-${scores.p1}!`
     }
     else {
-        message = `It was a tie, ${winState.p1} all!`
+        message = `It was a tie, ${scores.p1} all!`
     }
 
     const gridIsEnabled = !vsAI || squaresGame.turn === "p1";
@@ -105,13 +105,13 @@ export function Game({ width, height, vsAI }: any) {
             <div className="player-details">
                 <div className="player-details-2">
                     <img className="player-img" src={cat}></img>
-                    <p className="player-score">{0}</p>
+                    <p className="player-score">{scores.p1}</p>
                 </div>
                 <p className="player-name" >{"Player one"}</p>
             </div>
             <div className="player-details">
                 <div className="player-details-2" style={{ "justifyContent": "right"}}>
-                    <p className="player-score">{0}</p>
+                    <p className="player-score">{scores.p2}</p>
                     <img className="player-img" src={cat}></img>
                 </div>
                 <p className="player-name" style={{ "textAlign": "right"}}>{"Player two"}</p>
