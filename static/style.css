@@ -85,6 +85,10 @@ html, body {
    
 }
 
+:not(.player-details-active).player-details * {
+    opacity: 0.5;
+}
+
 .player-details-2 {
     display: flex;
 }

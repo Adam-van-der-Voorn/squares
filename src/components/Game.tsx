@@ -102,14 +102,14 @@ export function Game({ width, height, vsAI }: any) {
     return <div className="card" style={style} ref={ref}>
         <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} enabled={gridIsEnabled} rows={height} cols={width} />
         <div className="scores">
-            <div className="player-details">
+            <div className={"player-details " + (squaresGame.turn === "p1" ? "player-details-active" : "")}>
                 <div className="player-details-2">
                     <img className="player-img" src={cat}></img>
                     <p className="player-score">{scores.p1}</p>
                 </div>
                 <p className="player-name" >{"Player one"}</p>
             </div>
-            <div className="player-details">
+            <div className={"player-details " + (squaresGame.turn === "p2" ? "player-details-active" : "")}>
                 <div className="player-details-2" style={{ "justifyContent": "right"}}>
                     <p className="player-score">{scores.p2}</p>
                     <img className="player-img" src={cat}></img>
