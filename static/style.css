@@ -61,13 +61,9 @@ html, body {
 }
 
 .message-box {
-    position: relative;
-    left: -8px;
-    /* I have no fucking idea why you need the +1px here, but it's needed */
-    width: calc(100% + 1px);
     padding: 10px 20px;
     font-weight: bold;
-    border-radius: 999px; /* rounded */
+    border-radius: 30px; /* rounded */
     background-color: rgb(255, 232, 239);
     grid-area: message-box;
     font-size: 24px;
