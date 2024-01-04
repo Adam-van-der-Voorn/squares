@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
-import { SquaresGame, getScores, newGame, selectLine } from "../game";
+import { SquaresGame, getScores, newGame } from "../game";
 import { doAiMove } from "../ai";
 
 export function Game({ width, height, vsAI }: any) {
@@ -42,7 +42,7 @@ export function Game({ width, height, vsAI }: any) {
         }
     }, [windowHeight, windowWidth])
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!ref.current) {
             return;
         }
@@ -67,10 +67,11 @@ export function Game({ width, height, vsAI }: any) {
 
     useEffect(() => {
         if (vsAI && squaresGame.turn === "p2") {
+            const r = Math.floor(400 + (Math.random() * 300))
             setTimeout(() => {
                 doAiMove(squaresGame)
                 setSquaresGame({ ...squaresGame });
-            }, 500)
+            }, r)
         }
     }, [squaresGame])
 
