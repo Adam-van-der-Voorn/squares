@@ -49,17 +49,15 @@ export function Menu({ onStart }: Props) {
     const cat = "https://upload.wikimedia.org/wikipedia/commons/4/44/Cat_img.jpg"
 
     return <div className="menu-container">
-        <div className="menu-buttons-container">
-            <button className="menu-card" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: true })}>
-                <img className="player-img" src={cat}></img>
-                <p>Play the computer</p>
-            </button>
-            <button className="menu-card" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: false })}>
-                <img className="player-img" src={cat}></img>
-                <p>Two player game</p>
-            </button>
-        </div>
-        <div className="menu-card">
+        <button className="menu-card menu-button-a" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: true })}>
+            <img className="player-img" src={cat}></img>
+            <p>Play the computer</p>
+        </button>
+        <button className="menu-card menu-button-b" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: false })}>
+            <img className="player-img" src={cat}></img>
+            <p>Two player game</p>
+        </button>
+        <div className="menu-card menu-inputs">
             <div className="dots-input-container">
                 <label className="dots-input-label" htmlFor="width">Width:</label>
                 <input className="dots-input dots-input-width" type="text" name="width" value={width} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setWidth)} />

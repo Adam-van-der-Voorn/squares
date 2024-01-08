@@ -152,28 +152,46 @@ html, body {
     display: inline;
 }
 
+@media screen and (max-width: 500px) {
+    body .menu-container {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+        "button-a"
+        "button-b"
+        "inputs";
+    }
+  }
+
 .menu-container {
+    display: grid;
+
+    grid-template-areas:
+    "button-a button-b"
+    "inputs none";
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 16px;
     max-width: 600px;
     margin: auto;
     padding: 8px;
 }
 
-.menu-buttons-container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: stretch;
-    margin-bottom: 16px;
-}
-
-.menu-buttons-container > .menu-card {
+.menu-card.menu-buttons {
     display: block;
-    flex: 1 0 auto;
     cursor: pointer;
 }
 
-.menu-container > .menu-card {
+.menu-card.menu-button-a {
+    grid-area: button-a;
+}
+
+.menu-card.menu-button-b {
+    grid-area: button-b;
+}
+
+.menu-card .menu-inputs {
+    grid-area: inputs;
     max-width: 300px;
     margin: auto;
 }
