@@ -24,14 +24,14 @@ export function Menu({ onStart }: Props) {
         set(val)
     }
 
-    const handleSumbit = ({ withAI }: { withAI: boolean}) => {
+    const handleSumbit = ({ withAI }: { withAI: boolean }) => {
         const msg = "Pretty big board bro. You wanna go there?";
         if (isSubmitAllowed === "ask" && !confirm(msg)) {
             return;
         }
         // ok so
         // we minus 1 from each varible as the varibles represent the number of cells
-        // but it makes more sense to be th number of dots
+        // but it makes more sense to be the number of dots, so the inputs are that
         onStart(widthNum - 1, heightNum - 1, withAI)
     }
 
@@ -46,11 +46,29 @@ export function Menu({ onStart }: Props) {
         isSubmitAllowed = true;
     }
 
-    return <div>
-        <input type="text" name="width" value={width} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setWidth)} />
-        <input type="text" name="width" value={height} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setHeight)} />
-        <button disabled={isSubmitAllowed === false} onClick={() => handleSumbit({withAI: true})}>Play the computer</button>
-        <button disabled={isSubmitAllowed === false} onClick={() => handleSumbit({withAI: false})}>Two player game</button>
+    const cat = "https://upload.wikimedia.org/wikipedia/commons/4/44/Cat_img.jpg"
+
+    return <div className="menu-container">
+        <div className="menu-buttons-container">
+            <button className="menu-card" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: true })}>
+                <img className="player-img" src={cat}></img>
+                <p>Play the computer</p>
+            </button>
+            <button className="menu-card" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: false })}>
+                <img className="player-img" src={cat}></img>
+                <p>Two player game</p>
+            </button>
+        </div>
+        <div className="menu-card">
+            <div className="dots-input-container">
+                <label className="dots-input-label" htmlFor="width">Width:</label>
+                <input className="dots-input dots-input-width" type="text" name="width" value={width} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setWidth)} />
+            </div>
+            <div className="dots-input-container">
+            <label className="dots-input-label" htmlFor="height">Height:</label>
+                <input className="dots-input dots-input-height" type="text" name="height" value={height} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setHeight)} />
+            </div>
+        </div>
     </div>
 
 }
