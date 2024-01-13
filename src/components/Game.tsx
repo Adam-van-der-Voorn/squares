@@ -3,7 +3,7 @@ import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
 import { SquaresGame, getScores, newGame } from "../game";
-import { doAiMove } from "../ai";
+import { doAiMove } from "../ai/maximisePoints";
 
 export function Game({ width, height, vsAI }: any) {
     const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))

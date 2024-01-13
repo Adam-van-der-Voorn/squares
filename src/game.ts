@@ -8,9 +8,11 @@ export function lineKey({ x, y, horiOrVert }: LineKey): string {
 
 export type LineKey = { x: number, y: number, horiOrVert: "h" | "v" }
 
+export type CellPos = { x: number, y: number };
+
 export type Line = {
     key: LineKey
-    cells: {x: number, y: number}[],
+    cells: CellPos[],
     selected: boolean,
 }
 
@@ -127,26 +129,30 @@ export function numClaimedSquaresForLine(board: Board, lineKey: string): number 
 }
 
 export function selectLine(game: SquaresGame, lineKey: string): void {
-    game.board.lines[lineKey].selected = true;
-    let newClaimedSquares = 0;
-    for (const {x, y} of game.board.lines[lineKey].cells) {
-        console.log("checking cell x:", x, ", y:", y)
-        const cell = game.board.cells[y][x];       
+    const claimedCells = _selectLineOnBoard(game.board, lineKey, game.turn)
+    if (claimedCells.length === 0) {
+        game.turn = game.turn === "p1" ? "p2" : "p1";
+    }
+}
+
+/** WARNING: Do NOT mutate returned objects !!! */
+export function _selectLineOnBoard(board: Board, lineKey: string, turn: PlayerKey) {
+    board.lines[lineKey].selected = true;
+    const claimedCells = [];
+    for (const {x, y} of board.lines[lineKey].cells) {
+        const cell = board.cells[y][x];       
         if (cell.claim == null) {
             const isSurrounded = cell.lines.every(lk => {
-                const l = game.board.lines[lk];
-                console.log("line", lk, "selected?", l.selected)
+                const l = board.lines[lk];
                 return l.selected === true
             });
             if (isSurrounded) {
-                cell.claim = game.turn;
-                newClaimedSquares += 1;
+                cell.claim = turn;
+                claimedCells.push(cell);
             }
         }
     }
-    if (newClaimedSquares === 0) {
-        game.turn = game.turn === "p1" ? "p2" : "p1";
-    }
+    return claimedCells;
 }
 
 export function getScores(board: Board) {

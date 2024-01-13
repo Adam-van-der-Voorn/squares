@@ -67,14 +67,8 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
         if (!key || squaresGame.board.lines[key].selected) {
             return;
         }
-        console.group("Line :", key)
-
-        // prev
-        let newClaimedSquares = selectLine(squaresGame, key);
-        console.log("new claimed =", newClaimedSquares)
-
+        selectLine(squaresGame, key);
         setSquaresGame({... squaresGame})
-        console.groupEnd()
     }
 
     const getLineJsx = (key: string, offsetX = 0, offsetY = 0) => {
