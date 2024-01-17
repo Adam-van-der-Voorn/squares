@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  deep-clone:
+    specifier: ^4.0.0
+    version: 4.0.0
   react:
     specifier: ^18.2.0
     version: 18.2.0
@@ -1074,6 +1077,10 @@ packages:
     dependencies:
       ms: 2.1.2
     dev: true
+
+  /deep-clone@4.0.0:
+    resolution: {integrity: sha512-bMvDVR8GiGCGHT4SgqXyXDD9Zmo3kv9YLq8aSO2xslP97A3mFkpNBg+t+fjXERvewzhmtk9efvL+V52iVkD0lg==}
+    dev: false
 
   /default-gateway@6.0.3:
     resolution: {integrity: sha512-fwSOJsbbNzZ/CUFpqFBqYfYNLj1NbMPm8MMCIzHjC83iSJRBEGmDUxU+WP661BaBQImeC2yHwXtz+P/O9o+XEg==}
