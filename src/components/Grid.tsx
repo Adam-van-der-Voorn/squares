@@ -20,20 +20,40 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
     }
 
     useEffect(() => {
-        document.addEventListener('mousemove', handleMouseMove)
-        document.addEventListener('click', handleClick)
+        document.addEventListener('pointermove', handlePointerMove)
+        document.addEventListener('pointerdown', handlePointerDown)
         return () => {
-            document.removeEventListener('mousemove', handleMouseMove)
-            document.removeEventListener('click', handleClick)
+            document.removeEventListener('pointermove', handlePointerMove)
+            document.removeEventListener('pointerdown', handlePointerDown)
         }
     })
 
-    const handleMouseMove = (ev: any) => {
+    const handlePointerMove = (ev: PointerEvent) => {
+        if (ev.pointerType !== 'mouse') {
+            return;
+        }
+        setHoveredLine(getClosestLine(ev.pageX, ev.pageY));
+    }
+
+    const handlePointerDown = (ev: PointerEvent) => {
+        if (!enabled) {
+            return;
+        }
+        const closestLine = ev.pointerType === 'mouse'
+            ? hoveredLine ?? getClosestLine(ev.pageX, ev.pageY)
+            // 'touch' or 'pen'
+            : getClosestLine(ev.pageX, ev.pageY)
+
+        if (closestLine !== null) {
+            selectLineFromKey(closestLine)
+        }
+    }
+
+    const getClosestLine = (pointerPosX: number, pointerPosY: number): string | null => {
         const linesDOM = document.querySelectorAll(".line");
-        const mousePos = { x: ev.pageX, y: ev.pageY }
         const lineRect = linesDOM.item(0)?.getBoundingClientRect();
         if (!lineRect) {
-            return;
+            return null;
         }
         const lineLength = Math.max(lineRect.height, lineRect.width);
         const lineCenters = Array.from(linesDOM)
@@ -50,7 +70,7 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
         let closestLine: string | null = null;
         let smallestDist = Number.MAX_SAFE_INTEGER;
         for (const p of lineCenters) {
-            const distance = Math.sqrt(Math.pow(mousePos.x - p.x, 2) + Math.pow(mousePos.y - p.y, 2))
+            const distance = Math.sqrt(Math.pow(pointerPosX - p.x, 2) + Math.pow(pointerPosY - p.y, 2))
             if (distance < smallestDist) {
                 smallestDist = distance;
                 closestLine = p.key;
@@ -59,12 +79,11 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
         if (smallestDist > lineLength) {
             closestLine = null
         }
-        setHoveredLine(closestLine);
+        return closestLine;
     }
 
-    const handleClick = () => {
-        const key = hoveredLine;
-        if (!key || squaresGame.board.lines[key].selected) {
+    const selectLineFromKey = (key: string) => {
+        if (squaresGame.board.lines[key].selected) {
             return;
         }
         selectLine(squaresGame, key);
