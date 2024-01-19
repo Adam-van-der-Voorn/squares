@@ -49,7 +49,7 @@ function getSimpleBoardEvaluation(board: Board) {
         .filter(e => !e[1].selected);
     shuffle(avalibleLines);
     for (const [lk, _] of avalibleLines) {
-        const { lineKeys, points } = getSimpleValueOfLine(board, lk)
+        const { lineKeys, points } = getOptionsForLine(board, lk)
         const lineKeysKey = getLineKeysKey(lineKeys)
 
         // assertion
@@ -67,7 +67,61 @@ function getSimpleBoardEvaluation(board: Board) {
     return choices;
 }
 
-function getSimpleValueOfLine(board: Board, lineKey: string): Selection {
+function getPermsForLine(board: Board, lineKey: string): any {
+    const line = board.lines[lineKey];
+    const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
+    if (adjacentCells.length == 1) {
+        // 1 adjacent cell: simple case, max one point
+        const cellType = getCellType(board, adjacentCells[0])
+        if (cellType == "goal") {
+            // now this + all other cells
+            return Object.keys(board.lines)
+                .filter(lk => lk != lineKey)
+                // TODO memoise
+                .map(lk => ([lineKey, getPermsForLine(board, lk)]))
+        }
+        else {
+            return [lineKey];
+        }
+    }
+    else {
+        // 2 adjacent cells: possibly can get multiple points via tunnel
+        const a = getCellType(board, adjacentCells[0])
+        const b = getCellType(board, adjacentCells[1])
+        if (a === "goal" || b === "goal") {
+            if (a === "goal" && b === "goal") {
+                // both goal cells
+                return Object.keys(board.lines)
+                    .filter(lk => lk != lineKey)
+                    // TODO memoise
+                    .map(lk => ([lineKey, getPermsForLine(board, lk)]))
+            }
+            else if (a === "unsafe" || b === "unsafe") {
+                // one goal cell and one unsafe cell
+                let unsafeCellPos: CellPos, goalCellPos: CellPos;
+                if (a === "unsafe") {
+                    unsafeCellPos = line.cells[0]
+                    goalCellPos = line.cells[1]
+                }
+                else {
+                    unsafeCellPos = line.cells[1]
+                    goalCellPos = line.cells[0]
+                }
+                return getPointsForTunnel(board, goalCellPos, unsafeCellPos)
+            }
+            else {
+                // at least one goal cell, but no unsafe cells
+                return { lineKeys: [lineKey], points: 1 };
+            }
+        }
+        else {
+            // no goals
+            return [lineKey];
+        }
+    }
+}
+
+function getOptionsForLine(board: Board, lineKey: string): Selection[] {
     console.log("assessing line", lineKey)
     const line  = board.lines[lineKey];
     const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
@@ -76,14 +130,14 @@ function getSimpleValueOfLine(board: Board, lineKey: string): Selection {
         const cellType = getCellType(board, adjacentCells[0])
         console.log("single adj cell of type", cellType)
         if (cellType === "free" || cellType === "unsafe") {
-            return { lineKeys: [lineKey], points: 0 };
+            return [{ lineKeys: [lineKey], points: 0 }];
         }
         else if (cellType == "goal") {
-            return { lineKeys: [lineKey], points: 1 };
+            return [{ lineKeys: [lineKey], points: 1 }];
         }
         else {
             console.error("celltype should not be 'claimed' here. (line is unclaimed, only 1 adj cell)")
-            return { lineKeys: [lineKey], points: -99 };
+            return [{ lineKeys: [lineKey], points: -99 }];
         }
     }
     else {
@@ -93,7 +147,7 @@ function getSimpleValueOfLine(board: Board, lineKey: string): Selection {
         console.log("two adj cells of types", a, b)
         if (a === "goal" && b === "goal") {
             // both goal cells
-            return { lineKeys: [lineKey], points: 2 };
+            return [{ lineKeys: [lineKey], points: 2 }];
         }
         else if (a === "goal" || b === "goal") {
             if (a === "unsafe" || b === "unsafe") {
@@ -112,17 +166,23 @@ function getSimpleValueOfLine(board: Board, lineKey: string): Selection {
             }
             else {
                 // at least one goal cell
-                return { lineKeys: [lineKey], points: 1 };
+                return [{ lineKeys: [lineKey], points: 1 }];
             }
         }
         else {
             // no goals
-            return { lineKeys: [lineKey], points: 0 };
+            return [{ lineKeys: [lineKey], points: 0 }];
         }
     }
 }
 
-function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): Selection {
+function rec(s: Selection) {
+    .filter(lk => lk != lineKey)
+    // TODO memoise
+    .map(lk => ([lineKey, getPermsForLine(board, lk)]))
+}
+
+function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): Selection[] {
     const prevCell = board.cells[prevCellPos.y][prevCellPos.x];
     const nextCell = board.cells[nextCellPos.y][nextCellPos.x];
     const prevCellType = getCellType(board, nextCell);
@@ -133,7 +193,7 @@ function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: Cel
 
     if (getCellType(board, nextCell) !== "unsafe") {
         console.log(`next cell is not unsafe`)
-        return { lineKeys: [inBewteenLineKey], points: 1};
+        return [{ lineKeys: [inBewteenLineKey], points: 1}];
     }
 
     const otherUnclaimedLine = nextCell.lines
@@ -151,13 +211,28 @@ function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: Cel
     
     if (nextNextCellPos === undefined) {
         console.log(`next cell does not exist (i.e. tunnel leads off board)`)
-        return { lineKeys: [inBewteenLineKey], points: 1};
+        return [{ lineKeys: [inBewteenLineKey], points: 1}];
     }
 
     console.log(`next line=${lineKey(otherUnclaimedLine.key)}, next cell=${nextNextCellPos.x},${nextNextCellPos.y}`)
 
-    const next = getPointsForTunnel(board, nextCellPos, nextNextCellPos)
-    return { lineKeys: [...next.lineKeys, inBewteenLineKey], points: 1 + next.points}
+    const nextSteps = getPointsForTunnel(board, nextCellPos, nextNextCellPos)
+
+    // next may be...
+    // [{l2, l3}, {l2}]
+    // and iblk is l1
+    // must return 
+    // [{l1, l2, l3},{l1, l2},{l1}]
+
+    // add current step before next steps
+    const steps = nextSteps.map(s => {
+        return { lineKeys: [inBewteenLineKey, ...s.lineKeys], points: 1 + s.points}
+    })
+    return [
+        ...steps,
+        // include just current step
+        { lineKeys: [inBewteenLineKey], points: 1},
+    ]
 }
 
 /** @return goal, unsafe, free, claimed */
