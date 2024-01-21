@@ -33,7 +33,7 @@ export function doAiMove(squaresGame: SquaresGame): string | null {
             opponentPoints = predictedOpponentMove?.points
         }
         else {
-            console.assert(getScores(boardStatePostSelection).winner != null, "assume no points as game is won by ai")
+            console.assert(getScores(boardStatePostSelection).winner !== null, "assume no points as game is won by ai")
             return lineKeys[0]; // lineKeys is not empty due to guard
         }
         const score = points - opponentPoints;
@@ -156,59 +156,6 @@ function simpleEvaluateMove(board: Board, lineKey: string): number {
         }
     }
 }
-
-// function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): Move[] {
-//     const prevCell = board.cells[prevCellPos.y][prevCellPos.x];
-//     const nextCell = board.cells[nextCellPos.y][nextCellPos.x];
-//     const prevCellType = getCellType(board, nextCell);
-//     console.assert(prevCellType === "unsafe" || prevCellType === "goal", "invlaid arg")
-
-//     const inBewteenLineKey = prevCell.lines.filter(l => nextCell.lines.includes(l))[0];
-//     console.log(`getPointsForTunnel lk=${inBewteenLineKey} a=${prevCellPos.x},${prevCellPos.y} b=${nextCellPos.x},${nextCellPos.y}`)
-
-//     if (getCellType(board, nextCell) !== "unsafe") {
-//         console.log(`next cell is not unsafe`)
-//         return { lineKeys: [inBewteenLineKey], points: 1 };
-//     }
-
-//     const otherUnclaimedLine = nextCell.lines
-//         .filter(k => k != inBewteenLineKey)
-//         .map(lk => board.lines[lk])
-//         .filter(line => !line.selected)
-//     [0]
-
-//     const nextNextCellPos = otherUnclaimedLine.cells
-//         .filter(p => {
-//             console.log(`next next cell candidate=${p.x},${p.y}`)
-//             console.log(`nextCellPos.x=${nextCellPos.x} nextCellPos.y=${nextCellPos.y}`)
-//             !(p.x === nextCellPos.x && p.y == nextCellPos.y)
-//         })[0]
-
-//     if (nextNextCellPos === undefined) {
-//         console.log(`next cell does not exist (i.e. tunnel leads off board)`)
-//         return { lineKeys: [inBewteenLineKey], points: 1 };
-//     }
-
-//     console.log(`next line=${lineKey(otherUnclaimedLine.key)}, next cell=${nextNextCellPos.x},${nextNextCellPos.y}`)
-
-//     const nextSteps = getPointsForTunnel(board, nextCellPos, nextNextCellPos)
-
-//     // next may be...
-//     // [{l2, l3}, {l2}]
-//     // and iblk is l1
-//     // must return 
-//     // [{l1, l2, l3},{l1, l2},{l1}]
-
-//     // add current step before next steps
-//     const steps = nextSteps.map(s => {
-//         return { lineKeys: [inBewteenLineKey, ...s.lineKeys], points: 1 + s.points }
-//     })
-//     return [
-//         ...steps,
-//         // include just current step
-//         { lineKeys: [inBewteenLineKey], points: 1 },
-//     ]
-// }
 
 /** @return goal, unsafe, free, claimed */
 function getCellType(board: Board, cell: Cell): "goal" | "unsafe" | "free" | "claimed" {
