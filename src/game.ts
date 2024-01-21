@@ -119,7 +119,6 @@ export function boardDimensions(board: Board): { rows: number, cols: number } {
 export function numClaimedSquaresForLine(board: Board, lineKey: string): number {
     let numClaimed = 0;
     for (const {x, y} of board.lines[lineKey].cells) {
-        console.log("checking cell", x, ",", y)
         const cell = board.cells[y][x];
         if (cell.claim != null) {
             numClaimed += 1;

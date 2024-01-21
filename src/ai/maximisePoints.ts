@@ -1,20 +1,24 @@
-import deepClone from "deep-clone";
-import { Board, Cell, CellPos, SquaresGame, _selectLineOnBoard, lineKey, selectLine } from "../game";
+import { Board, Cell, SquaresGame, _selectLineOnBoard, getScores } from "../game";
 import { shuffle } from "../util";
 
-type Selection = {
+type Move = {
     points: number,
     lineKeys: string[]
 }
 
-export function doAiMove(squaresGame: SquaresGame): void {
-    console.log("\nstart AI move:")
-    const simpleChoices = getSimpleBoardEvaluation(squaresGame.board);
+export function doAiMove(squaresGame: SquaresGame): string | null {
+    console.log("\n\n\n\nstart AI move:")
+    const possibleMoves = getSimpleBoardEvaluation(squaresGame.board);
+    console.log("possible moves for ai:", JSON.stringify(possibleMoves, null, 2))
 
-    let bestMove: { lineKey: string, score: number } | null = null;
-    for (const {lineKeys, points} of simpleChoices) {
+    let bestMove: any = null;
+    for (const { lineKeys, points } of possibleMoves) {
+        if (lineKeys.length === 0) {
+            console.error("this should not happen")
+            continue;
+        }
         // make the choice on a clone board
-        const boardStatePostSelection = deepClone(squaresGame.board);
+        const boardStatePostSelection = structuredClone(squaresGame.board);
         for (const lk of lineKeys) {
             // I'm not actully sure it matters if it's p1 or p2 here, as
             // we don't care about the score
@@ -22,218 +26,189 @@ export function doAiMove(squaresGame: SquaresGame): void {
         }
 
         // evaluate board state for opponent, get max points they can get
-        const opponentPoints = getSimpleBoardEvaluation(boardStatePostSelection)
-            ?.[0]
-            .points;
+        console.log("getting possible moves for opponent if AI does", JSON.stringify(lineKeys))
+        const predictedOpponentMove = getSimpleBoardEvaluation(boardStatePostSelection)?.[0];
+        let opponentPoints;
+        if (predictedOpponentMove?.points !== undefined) {
+            opponentPoints = predictedOpponentMove?.points
+        }
+        else {
+            console.assert(getScores(boardStatePostSelection).winner != null, "assume no points as game is won by ai")
+            return lineKeys[0]; // lineKeys is not empty due to guard
+        }
         const score = points - opponentPoints;
+        console.log("outcome", {points, opponentPoints, predictedOpponentMove})
         if (!bestMove || score > bestMove.score) {
-            const lineKey = lineKeys[0];
-            if (!lineKey) {
-                console.error("this should not happen")
-                continue;
-            }
+            const lineKey = lineKeys[0]; // lineKeys is not empty due to guard
             bestMove = { score, lineKey }
+            console.log("**\nbest move changed to", bestMove, "\n**")
         }
     }
-    
-    if (bestMove === null) {
-        return;
-    }
-
-    selectLine(squaresGame, bestMove.lineKey);
+    console.log("best move", bestMove)
+    return bestMove.lineKey ?? null;
 }
 
 function getSimpleBoardEvaluation(board: Board) {
-    const decisionMap: Record<string, Selection> = {}
-    const avalibleLines = Object.entries(board.lines)
-        .filter(e => !e[1].selected);
-    shuffle(avalibleLines);
-    for (const [lk, _] of avalibleLines) {
-        const { lineKeys, points } = getOptionsForLine(board, lk)
-        const lineKeysKey = getLineKeysKey(lineKeys)
+    const avalibleLineKeys = Object.entries(board.lines)
+        .filter(e => !e[1].selected)
+        .map(e => e[0]);
 
-        // assertion
-        if (decisionMap[lineKeysKey] != null) {
-            console.log("can this even happen? asd")
-            console.assert(decisionMap[lineKeysKey].points === points, "entry in decision map with same key has different value :(")
+    shuffle(avalibleLineKeys);
+
+    const completeMoves: Record<string, Move> = {};
+    let incompleteMoves: Move[] = []
+
+    // first iteration
+    for (const lk of avalibleLineKeys) {
+        const points = simpleEvaluateMove(board, lk)
+        // sort evaluated moves into buckets of moves that score points, and moves that don't
+        const move = { points, lineKeys: [lk]}
+        if (points <= 0 || avalibleLineKeys.length === 1) {
+            completeMoves[moveKey(move.lineKeys)] = move;
         }
-
-        decisionMap[lineKeysKey] = { lineKeys, points };
+        else {
+            incompleteMoves.push(move);
+        }
     }
 
-    const choices = Object.entries(decisionMap)
-        .map(([selectionKey, selection]) => ({ key: selectionKey, points: selection.points, lineKeys: selection.lineKeys }))
+    // remaining iterations
+    let limit = 50;
+    while (incompleteMoves.length > 0 && limit > 0) {
+        limit -= 1;
+        const furtherIncompleteMoves = []
+        for (const move of incompleteMoves) {
+            // we can potentially avoid deep clone by implementing undo in board DS somehow
+            const boardWithMoveApplied = structuredClone(board);
+            // do move sequence
+            for (const lk of move.lineKeys) {
+                _selectLineOnBoard(boardWithMoveApplied, lk, "p2")
+            }
+            const remainingLineKeys = avalibleLineKeys
+                // only process unselected lines
+                .filter(lk => !move.lineKeys.includes(lk))
+
+            for (const lk of remainingLineKeys) {
+                const newLineKeys = [...move.lineKeys, lk];
+                const newMoveKey: string = moveKey(newLineKeys);
+                if (completeMoves[newMoveKey]) {
+                    // move has already been done- skip
+                    continue;
+                }
+                const singleMovePoints = simpleEvaluateMove(boardWithMoveApplied, lk)
+                const aggregatedMove: Move = {
+                    points: move.points + singleMovePoints,
+                    lineKeys: newLineKeys
+                }
+
+                // sort evaluated moves into buckets of moves that score points, and moves that don't
+                if (singleMovePoints <= 0 || aggregatedMove.lineKeys.length >= avalibleLineKeys.length) {
+                    completeMoves[newMoveKey] = aggregatedMove;
+                }
+                else {
+                    furtherIncompleteMoves.push(aggregatedMove);
+                }
+            }
+        }
+        incompleteMoves = furtherIncompleteMoves;
+    }
+
+    if (limit <= 0) {
+        console.error("getPossibleMoves limit hit!")
+    }
+
+    const choices = Object.values(completeMoves)
         .sort((a, b) => b.points - a.points)
     return choices;
 }
 
-function getPermsForLine(board: Board, lineKey: string): any {
+function simpleEvaluateMove(board: Board, lineKey: string): number {
     const line = board.lines[lineKey];
-    const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
-    if (adjacentCells.length == 1) {
-        // 1 adjacent cell: simple case, max one point
-        const cellType = getCellType(board, adjacentCells[0])
-        if (cellType == "goal") {
-            // now this + all other cells
-            return Object.keys(board.lines)
-                .filter(lk => lk != lineKey)
-                // TODO memoise
-                .map(lk => ([lineKey, getPermsForLine(board, lk)]))
-        }
-        else {
-            return [lineKey];
-        }
-    }
-    else {
-        // 2 adjacent cells: possibly can get multiple points via tunnel
-        const a = getCellType(board, adjacentCells[0])
-        const b = getCellType(board, adjacentCells[1])
-        if (a === "goal" || b === "goal") {
-            if (a === "goal" && b === "goal") {
-                // both goal cells
-                return Object.keys(board.lines)
-                    .filter(lk => lk != lineKey)
-                    // TODO memoise
-                    .map(lk => ([lineKey, getPermsForLine(board, lk)]))
-            }
-            else if (a === "unsafe" || b === "unsafe") {
-                // one goal cell and one unsafe cell
-                let unsafeCellPos: CellPos, goalCellPos: CellPos;
-                if (a === "unsafe") {
-                    unsafeCellPos = line.cells[0]
-                    goalCellPos = line.cells[1]
-                }
-                else {
-                    unsafeCellPos = line.cells[1]
-                    goalCellPos = line.cells[0]
-                }
-                return getPointsForTunnel(board, goalCellPos, unsafeCellPos)
-            }
-            else {
-                // at least one goal cell, but no unsafe cells
-                return { lineKeys: [lineKey], points: 1 };
-            }
-        }
-        else {
-            // no goals
-            return [lineKey];
-        }
-    }
-}
-
-function getOptionsForLine(board: Board, lineKey: string): Selection[] {
-    console.log("assessing line", lineKey)
-    const line  = board.lines[lineKey];
     const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
     if (adjacentCells.length == 1) {
         // 1: simple case, max one point
         const cellType = getCellType(board, adjacentCells[0])
-        console.log("single adj cell of type", cellType)
         if (cellType === "free" || cellType === "unsafe") {
-            return [{ lineKeys: [lineKey], points: 0 }];
+            return 0;
         }
         else if (cellType == "goal") {
-            return [{ lineKeys: [lineKey], points: 1 }];
+            return 1;
         }
         else {
             console.error("celltype should not be 'claimed' here. (line is unclaimed, only 1 adj cell)")
-            return [{ lineKeys: [lineKey], points: -99 }];
+            return -9999;
         }
     }
     else {
         // 2: possibly can get multiple points via tunnel
         const a = getCellType(board, adjacentCells[0])
         const b = getCellType(board, adjacentCells[1])
-        console.log("two adj cells of types", a, b)
         if (a === "goal" && b === "goal") {
             // both goal cells
-            return [{ lineKeys: [lineKey], points: 2 }];
+            return 2;
         }
         else if (a === "goal" || b === "goal") {
-            if (a === "unsafe" || b === "unsafe") {
-                // one goal cell and one unsafe cell
-                let unsafeCellPos: CellPos, goalCellPos: CellPos;
-                if (a === "unsafe") {
-                    unsafeCellPos = line.cells[0]
-                    goalCellPos = line.cells[1]
-                }
-                else {
-                    unsafeCellPos = line.cells[1]
-                    goalCellPos = line.cells[0]
-                }
-                return getPointsForTunnel(board, goalCellPos, unsafeCellPos)
-
-            }
-            else {
-                // at least one goal cell
-                return [{ lineKeys: [lineKey], points: 1 }];
-            }
+            // at least one goal cell
+            return 1;
         }
         else {
             // no goals
-            return [{ lineKeys: [lineKey], points: 0 }];
+            return 0;
         }
     }
 }
 
-function rec(s: Selection) {
-    .filter(lk => lk != lineKey)
-    // TODO memoise
-    .map(lk => ([lineKey, getPermsForLine(board, lk)]))
-}
+// function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): Move[] {
+//     const prevCell = board.cells[prevCellPos.y][prevCellPos.x];
+//     const nextCell = board.cells[nextCellPos.y][nextCellPos.x];
+//     const prevCellType = getCellType(board, nextCell);
+//     console.assert(prevCellType === "unsafe" || prevCellType === "goal", "invlaid arg")
 
-function getPointsForTunnel(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): Selection[] {
-    const prevCell = board.cells[prevCellPos.y][prevCellPos.x];
-    const nextCell = board.cells[nextCellPos.y][nextCellPos.x];
-    const prevCellType = getCellType(board, nextCell);
-    console.assert(prevCellType === "unsafe" || prevCellType === "goal", "invlaid arg")
+//     const inBewteenLineKey = prevCell.lines.filter(l => nextCell.lines.includes(l))[0];
+//     console.log(`getPointsForTunnel lk=${inBewteenLineKey} a=${prevCellPos.x},${prevCellPos.y} b=${nextCellPos.x},${nextCellPos.y}`)
 
-    const inBewteenLineKey = prevCell.lines.filter(l => nextCell.lines.includes(l))[0];
-    console.log(`getPointsForTunnel lk=${inBewteenLineKey} a=${prevCellPos.x},${prevCellPos.y} b=${nextCellPos.x},${nextCellPos.y}`)
+//     if (getCellType(board, nextCell) !== "unsafe") {
+//         console.log(`next cell is not unsafe`)
+//         return { lineKeys: [inBewteenLineKey], points: 1 };
+//     }
 
-    if (getCellType(board, nextCell) !== "unsafe") {
-        console.log(`next cell is not unsafe`)
-        return [{ lineKeys: [inBewteenLineKey], points: 1}];
-    }
+//     const otherUnclaimedLine = nextCell.lines
+//         .filter(k => k != inBewteenLineKey)
+//         .map(lk => board.lines[lk])
+//         .filter(line => !line.selected)
+//     [0]
 
-    const otherUnclaimedLine = nextCell.lines
-        .filter(k => k != inBewteenLineKey)
-        .map(lk => board.lines[lk])
-        .filter(line => !line.selected)
-        [0]
+//     const nextNextCellPos = otherUnclaimedLine.cells
+//         .filter(p => {
+//             console.log(`next next cell candidate=${p.x},${p.y}`)
+//             console.log(`nextCellPos.x=${nextCellPos.x} nextCellPos.y=${nextCellPos.y}`)
+//             !(p.x === nextCellPos.x && p.y == nextCellPos.y)
+//         })[0]
 
-    const nextNextCellPos = otherUnclaimedLine.cells
-        .filter(p => {
-            console.log(`next next cell candidate=${p.x},${p.y}`)
-            console.log(`nextCellPos.x=${nextCellPos.x} nextCellPos.y=${nextCellPos.y}`)
-            !(p.x === nextCellPos.x && p.y == nextCellPos.y)
-        })[0]
-    
-    if (nextNextCellPos === undefined) {
-        console.log(`next cell does not exist (i.e. tunnel leads off board)`)
-        return [{ lineKeys: [inBewteenLineKey], points: 1}];
-    }
+//     if (nextNextCellPos === undefined) {
+//         console.log(`next cell does not exist (i.e. tunnel leads off board)`)
+//         return { lineKeys: [inBewteenLineKey], points: 1 };
+//     }
 
-    console.log(`next line=${lineKey(otherUnclaimedLine.key)}, next cell=${nextNextCellPos.x},${nextNextCellPos.y}`)
+//     console.log(`next line=${lineKey(otherUnclaimedLine.key)}, next cell=${nextNextCellPos.x},${nextNextCellPos.y}`)
 
-    const nextSteps = getPointsForTunnel(board, nextCellPos, nextNextCellPos)
+//     const nextSteps = getPointsForTunnel(board, nextCellPos, nextNextCellPos)
 
-    // next may be...
-    // [{l2, l3}, {l2}]
-    // and iblk is l1
-    // must return 
-    // [{l1, l2, l3},{l1, l2},{l1}]
+//     // next may be...
+//     // [{l2, l3}, {l2}]
+//     // and iblk is l1
+//     // must return 
+//     // [{l1, l2, l3},{l1, l2},{l1}]
 
-    // add current step before next steps
-    const steps = nextSteps.map(s => {
-        return { lineKeys: [inBewteenLineKey, ...s.lineKeys], points: 1 + s.points}
-    })
-    return [
-        ...steps,
-        // include just current step
-        { lineKeys: [inBewteenLineKey], points: 1},
-    ]
-}
+//     // add current step before next steps
+//     const steps = nextSteps.map(s => {
+//         return { lineKeys: [inBewteenLineKey, ...s.lineKeys], points: 1 + s.points }
+//     })
+//     return [
+//         ...steps,
+//         // include just current step
+//         { lineKeys: [inBewteenLineKey], points: 1 },
+//     ]
+// }
 
 /** @return goal, unsafe, free, claimed */
 function getCellType(board: Board, cell: Cell): "goal" | "unsafe" | "free" | "claimed" {
@@ -251,8 +226,8 @@ function getCellType(board: Board, cell: Cell): "goal" | "unsafe" | "free" | "cl
     return "goal"
 }
 
-function getLineKeysKey(lineKeys: string[]) {
-    return lineKeys.sort().join(" ")
+function moveKey(lineKeys: string[]) {
+    return [...lineKeys].sort().join(" ")
 }
 
 // algo

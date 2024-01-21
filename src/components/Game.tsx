@@ -2,12 +2,12 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
-import { SquaresGame, getScores, newGame } from "../game";
+import { SquaresGame, getScores, newGame, selectLine } from "../game";
 import { doAiMove } from "../ai/maximisePoints";
 
 export function Game({ width, height, vsAI }: any) {
     const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))
-    const [style, setStyle] = useState<React.CSSProperties>({ width: "100%", height: "fit-content" })
+    const [style, setStyle] = useState<Record<string, string>>({ width: "100%", height: "fit-content" })
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
 
@@ -65,16 +65,6 @@ export function Game({ width, height, vsAI }: any) {
         }
     })
 
-    useEffect(() => {
-        if (vsAI && squaresGame.turn === "p2") {
-            const r = Math.floor(400 + (Math.random() * 300))
-            setTimeout(() => {
-                doAiMove(squaresGame)
-                setSquaresGame({ ...squaresGame });
-            }, r)
-        }
-    }, [squaresGame])
-
     const scores = useMemo(() => getScores(squaresGame.board), [squaresGame])
 
     let message;
@@ -95,6 +85,14 @@ export function Game({ width, height, vsAI }: any) {
     else {
         message = `It was a tie, ${scores.p1} all!`
     }
+
+    useEffect(() => {
+        if (vsAI && squaresGame.turn === "p2" && scores.winner === null) {
+            const lineKey = doAiMove(squaresGame);
+            selectLine(squaresGame, lineKey)
+            setSquaresGame({ ...squaresGame });
+        }
+    }, [squaresGame])
 
     const gridIsEnabled = !vsAI || squaresGame.turn === "p1";
 

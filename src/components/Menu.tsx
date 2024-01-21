@@ -7,8 +7,8 @@ export type Props = {
 const MIN_DOTS = 2, MAX_DOTS = 30;
 
 export function Menu({ onStart }: Props) {
-    const [width, setWidth] = useState("6");
-    const [height, setHeight] = useState("6");
+    const [width, setWidth] = useState("4");
+    const [height, setHeight] = useState("4");
     const widthNum = parseInt(width);
     const heightNum = parseInt(height);
 
@@ -59,12 +59,12 @@ export function Menu({ onStart }: Props) {
         </button>
         <div className="menu-card menu-inputs">
             <div className="dots-input-container">
-                <label className="dots-input-label" htmlFor="width">Width:</label>
-                <input className="dots-input dots-input-width" type="text" name="width" value={width} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setWidth)} />
+                <label className="dots-input-label" htmlFor="width-inp">Width:</label>
+                <input className="dots-input dots-input-width" type="text" id="width-inp" value={width} placeholder={`${MIN_DOTS}`} autoComplete="off" onChange={ev => parse(ev, setWidth)} />
             </div>
             <div className="dots-input-container">
-            <label className="dots-input-label" htmlFor="height">Height:</label>
-                <input className="dots-input dots-input-height" type="text" name="height" value={height} placeholder={`${MIN_DOTS}`} onChange={ev => parse(ev, setHeight)} />
+            <label className="dots-input-label" htmlFor="height-inp">Height:</label>
+                <input className="dots-input dots-input-height" type="text" id="height-inp" value={height} placeholder={`${MIN_DOTS}`} autoComplete="off" onChange={ev => parse(ev, setHeight)} />
             </div>
         </div>
     </div>
