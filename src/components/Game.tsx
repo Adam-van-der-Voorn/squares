@@ -1,9 +1,11 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
-import { getPxValue, useWindowDimensions } from "../util";
+import { getPxValue, setTimeoutP, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
 import { SquaresGame, getScores, newGame, selectLine } from "../game";
 import { doAiMove } from "../ai/maximisePoints";
+
+const AI_DELAY = 300;
 
 export function Game({ width, height, vsAI }: any) {
     const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))
@@ -88,9 +90,15 @@ export function Game({ width, height, vsAI }: any) {
 
     useEffect(() => {
         if (vsAI && squaresGame.turn === "p2" && scores.winner === null) {
-            const lineKey = doAiMove(squaresGame);
-            selectLine(squaresGame, lineKey)
-            setSquaresGame({ ...squaresGame });
+            const a = setTimeoutP(AI_DELAY);
+            const b = Promise.resolve(doAiMove(squaresGame))
+            Promise.all([a, b]).then(([_, lineKey]) => {
+                if (lineKey === null) {
+                    return;
+                }
+                selectLine(squaresGame, lineKey)
+                setSquaresGame({ ...squaresGame });
+            })
         }
     }, [squaresGame])
 
