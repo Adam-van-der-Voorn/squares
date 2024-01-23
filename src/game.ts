@@ -116,17 +116,6 @@ export function boardDimensions(board: Board): { rows: number, cols: number } {
     }
 }
 
-export function numClaimedSquaresForLine(board: Board, lineKey: string): number {
-    let numClaimed = 0;
-    for (const {x, y} of board.lines[lineKey].cells) {
-        const cell = board.cells[y][x];
-        if (cell.claim != null) {
-            numClaimed += 1;
-        }
-    }
-    return numClaimed;
-}
-
 export function selectLine(game: SquaresGame, lineKey: string): void {
     const claimedCells = _selectLineOnBoard(game.board, lineKey, game.turn)
     if (claimedCells.length === 0) {
@@ -152,6 +141,14 @@ export function _selectLineOnBoard(board: Board, lineKey: string, turn: PlayerKe
         }
     }
     return claimedCells;
+}
+
+export function _unselectLineOnBoard(board: Board, lineKey: string) {
+    board.lines[lineKey].selected = false;
+    for (const {x, y} of board.lines[lineKey].cells) {
+        const cell = board.cells[y][x];       
+        cell.claim = null;
+    }
 }
 
 export function getScores(board: Board) {

@@ -1,4 +1,4 @@
-import { Board, Cell, SquaresGame, _selectLineOnBoard, getScores } from "../game";
+import { Board, Cell, SquaresGame, _selectLineOnBoard, _unselectLineOnBoard, getScores } from "../game";
 import { shuffle } from "../util";
 
 type Move = {
@@ -17,25 +17,32 @@ export function doAiMove(squaresGame: SquaresGame): string | null {
             console.error("this should not happen")
             continue;
         }
-        // make the choice on a clone board
-        const boardStatePostSelection = structuredClone(squaresGame.board);
+        // make the move on the board- this should be reverted later
         for (const lk of lineKeys) {
             // I'm not actully sure it matters if it's p1 or p2 here, as
             // we don't care about the score
-            _selectLineOnBoard(boardStatePostSelection, lk, "p2")
+            _selectLineOnBoard(squaresGame.board, lk, "p2")
         }
 
         // evaluate board state for opponent, get max points they can get
         console.log("getting possible moves for opponent if AI does", JSON.stringify(lineKeys))
-        const predictedOpponentMove = getSimpleBoardEvaluation(boardStatePostSelection)?.[0];
+        const predictedOpponentMove = getSimpleBoardEvaluation(squaresGame.board)?.[0];
+
+        // calc score based on how many points we think opponent will get
         let opponentPoints;
         if (predictedOpponentMove?.points !== undefined) {
             opponentPoints = predictedOpponentMove?.points
         }
         else {
-            console.assert(getScores(boardStatePostSelection).winner !== null, "assume no points as game is won by ai")
+            console.assert(getScores(squaresGame.board).winner !== null, "assume no points as game is won by ai")
             return lineKeys[0]; // lineKeys is not empty due to guard
         }
+
+        // revert board back to original state 
+        for (const lk of lineKeys) {
+            _unselectLineOnBoard(squaresGame.board, lk)
+        }
+        
         const score = points - opponentPoints;
         console.log("outcome", {points, opponentPoints, predictedOpponentMove})
         if (!bestMove || score > bestMove.score) {
@@ -77,11 +84,9 @@ function getSimpleBoardEvaluation(board: Board) {
         limit -= 1;
         const furtherIncompleteMoves = []
         for (const move of incompleteMoves) {
-            // we can potentially avoid deep clone by implementing undo in board DS somehow
-            const boardWithMoveApplied = structuredClone(board);
             // do move sequence
             for (const lk of move.lineKeys) {
-                _selectLineOnBoard(boardWithMoveApplied, lk, "p2")
+                _selectLineOnBoard(board, lk, "p2")
             }
             const remainingLineKeys = avalibleLineKeys
                 // only process unselected lines
@@ -94,7 +99,7 @@ function getSimpleBoardEvaluation(board: Board) {
                     // move has already been done- skip
                     continue;
                 }
-                const singleMovePoints = simpleEvaluateMove(boardWithMoveApplied, lk)
+                const singleMovePoints = simpleEvaluateMove(board, lk)
                 const aggregatedMove: Move = {
                     points: move.points + singleMovePoints,
                     lineKeys: newLineKeys
@@ -107,6 +112,11 @@ function getSimpleBoardEvaluation(board: Board) {
                 else {
                     furtherIncompleteMoves.push(aggregatedMove);
                 }
+            }
+
+            // revert board back to original state 
+            for (const lk of move.lineKeys) {
+                _unselectLineOnBoard(board, lk)
             }
         }
         incompleteMoves = furtherIncompleteMoves;
