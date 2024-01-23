@@ -1,5 +1,5 @@
 import { Board, Cell, SquaresGame, _selectLineOnBoard, _unselectLineOnBoard, getScores } from "../main/game";
-import { shuffle, unpack } from "../main/util";
+import { shuffle, unpack } from "../main/util/simple";
 
 type Move = {
     points: number,

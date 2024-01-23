@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useState } from "react";
 import { selectLine, getScores, SquaresGame } from "../game";
-import { ReactSetState, unpack } from "../util";
+import { ReactSetState, unpack } from "../util/simple";
 import { Line, Props as LineProps } from "./Line";
 import { Dots } from "./Dots";
 

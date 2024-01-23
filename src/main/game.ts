@@ -1,4 +1,4 @@
-import { unpack } from "./util"
+import { unpack } from "./util/simple"
 
 export type PlayerKey = "p1" | "p2"
 

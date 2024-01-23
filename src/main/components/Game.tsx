@@ -1,9 +1,9 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
-import { getPxValue, setTimeoutP, useWindowDimensions } from "../util";
+import { getPxValue, setTimeoutP, useWindowDimensions } from "../util/simple";
 import { Grid } from "./Grid";
 import { SquaresGame, getScores, newGame, selectLine } from "../game";
-import { doAiMove } from "../../worker_ai/x";
+import { KeyedMessageEvent, usePromiseWorker } from "../util/usePromiseWorker";
 
 const AI_DELAY = 300;
 
@@ -12,6 +12,9 @@ export function Game({ width, height, vsAI }: any) {
     const [style, setStyle] = useState<Record<string, string>>({ width: "100%", height: "fit-content" })
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
+
+    const workerOpts = useMemo(() => ({ type: "module" }), [])
+    const promptAi = usePromiseWorker("ai.worker.rand.bundle.js", workerOpts as any)
 
     const rootStyles = getComputedStyle(document.documentElement)
 
@@ -90,15 +93,23 @@ export function Game({ width, height, vsAI }: any) {
 
     useEffect(() => {
         if (vsAI && squaresGame.turn === "p2" && scores.winner === null) {
-            const a = setTimeoutP(AI_DELAY);
-            const b = Promise.resolve(doAiMove(squaresGame))
-            Promise.all([a, b]).then(([_, lineKey]) => {
-                if (lineKey === null) {
-                    return;
-                }
-                selectLine(squaresGame, lineKey)
-                setSquaresGame({ ...squaresGame });
-            })
+            const aiPromise = promptAi(squaresGame.board);
+            if (aiPromise !== undefined) {
+                const otherPromise = setTimeoutP(AI_DELAY);
+                Promise.all([aiPromise, otherPromise]).then(all => {
+                    const ev: KeyedMessageEvent = all[0];
+                    if (!ev) {
+                        return;
+                    }
+                    const lineKey = ev.data.message;
+                    if (typeof lineKey !== 'string') {
+                        return;
+                    }
+                    selectLine(squaresGame, lineKey);
+                    setSquaresGame({ ...squaresGame });
+
+                })
+            }
         }
     }, [squaresGame])
 
@@ -117,11 +128,11 @@ export function Game({ width, height, vsAI }: any) {
                 <p className="player-name" >{"Player one"}</p>
             </div>
             <div className={"player-details " + (squaresGame.turn === "p2" ? "player-details-active" : "")}>
-                <div className="player-details-2" style={{ "justifyContent": "right"}}>
+                <div className="player-details-2" style={{ "justifyContent": "right" }}>
                     <p className="player-score">{scores.p2}</p>
                     <img className="player-img" src={cat}></img>
                 </div>
-                <p className="player-name" style={{ "textAlign": "right"}}>{"Player two"}</p>
+                <p className="player-name" style={{ "textAlign": "right" }}>{"Player two"}</p>
             </div>
         </div>
         <div className="message-box">
