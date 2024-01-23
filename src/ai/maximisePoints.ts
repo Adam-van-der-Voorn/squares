@@ -1,5 +1,5 @@
 import { Board, Cell, SquaresGame, _selectLineOnBoard, _unselectLineOnBoard, getScores } from "../game";
-import { shuffle } from "../util";
+import { shuffle, unpack } from "../util";
 
 type Move = {
     points: number,
@@ -8,6 +8,11 @@ type Move = {
 
 export function doAiMove(squaresGame: SquaresGame): string | null {
     console.log("\n\n\n\nstart AI move:")
+    const avaliblePoints = unpack(squaresGame.board.cells)
+        .filter(c => c.val.claim === null)
+        .length
+    const { p1: currentOpponentPoints, p2: currentOwnPoints } = getScores(squaresGame.board);
+
     const possibleMoves = getSimpleBoardEvaluation(squaresGame.board);
     console.log("possible moves for ai:", JSON.stringify(possibleMoves, null, 2))
 
@@ -16,6 +21,14 @@ export function doAiMove(squaresGame: SquaresGame): string | null {
         if (lineKeys.length === 0) {
             console.error("this should not happen")
             continue;
+        }
+
+        const remainingPoints = avaliblePoints - points;
+        if (points >= avaliblePoints || currentOwnPoints + points > currentOpponentPoints + remainingPoints) {
+            // if we do this move we will either have ended the match, or will have gotten more total points
+            // than the player. As possibleMoves is sorted from highest points to lowest, this should return
+            // as early as possible
+            return lineKeys[0]
         }
         // make the move on the board- this should be reverted later
         for (const lk of lineKeys) {
@@ -42,7 +55,7 @@ export function doAiMove(squaresGame: SquaresGame): string | null {
         for (const lk of lineKeys) {
             _unselectLineOnBoard(squaresGame.board, lk)
         }
-        
+
         const score = points - opponentPoints;
         console.log("outcome", {points, opponentPoints, predictedOpponentMove})
         if (!bestMove || score > bestMove.score) {
