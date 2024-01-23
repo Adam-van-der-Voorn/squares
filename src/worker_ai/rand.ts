@@ -1,4 +1,4 @@
-import { SquaresGame, selectLine } from "../game";
+import { SquaresGame, selectLine } from "../main/game";
 
 export function doAiMove(squaresGame: SquaresGame): void {
     console.log("AI: choosing move")

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { getPxValue, setTimeoutP, useWindowDimensions } from "../util";
 import { Grid } from "./Grid";
 import { SquaresGame, getScores, newGame, selectLine } from "../game";
-import { doAiMove } from "../ai/maximisePoints";
+import { doAiMove } from "../../worker_ai/x";
 
 const AI_DELAY = 300;
 

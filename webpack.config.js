@@ -1,9 +1,14 @@
+// @ts-nocheck
 const path = require('path');
 
 const base = {
-    entry: './src/entry.tsx',
+    entry: {
+        "main": './src/main/entry.tsx',
+        "ai.worker.rand": './src/worker_ai/rand.ts',
+        "ai.worker.x": './src/worker_ai/x.ts',
+    },
     output: {
-        filename: 'app.bundle.js',
+        filename: '[name].bundle.js',
         path: path.resolve(__dirname, 'static'),
         // needed as default hash fn has now been deemed insecure
         hashFunction: 'xxhash64',
