@@ -1,19 +1,36 @@
-import { Board, Cell, SquaresGame, _selectLineOnBoard, _unselectLineOnBoard, getScores } from "../main/game";
+import { Board, Cell, _selectLineOnBoard, _unselectLineOnBoard, getScores } from "../main/game";
 import { shuffle, unpack } from "../main/util/simple";
+import { KeyedMessageEvent } from "../main/util/usePromiseWorker";
 
 type Move = {
     points: number,
     lineKeys: string[]
 }
 
-export function doAiMove(squaresGame: SquaresGame): string | null {
+self.onmessage = (ev: KeyedMessageEvent) => {
+    // validate message, we expect a baord in `message` (lines prop is proof enough) and a key
+    // I have no idea why, but it seems that react devtools is triggering this event?
+    // so we also validate "type safe" stuff
+    const v = ev.data as any;
+    if (v?.message?.lines === undefined || v?.key === undefined) {
+        return;
+    }
+
+    const board = ev.data?.message as Board;
+    const key = ev.data?.key
+
     console.log("\n\n\n\nstart AI move:")
-    const avaliblePoints = unpack(squaresGame.board.cells)
+    const lineKey = getBestMove(board)
+    postMessage({ key, message: lineKey })
+}
+
+function getBestMove(board: Board): string | null {
+    const avaliblePoints = unpack(board.cells)
         .filter(c => c.val.claim === null)
         .length
-    const { p1: currentOpponentPoints, p2: currentOwnPoints } = getScores(squaresGame.board);
+    const { p1: currentOpponentPoints, p2: currentOwnPoints } = getScores(board);
 
-    const possibleMoves = getSimpleBoardEvaluation(squaresGame.board);
+    const possibleMoves = getSimpleBoardEvaluation(board);
     console.log("possible moves for ai:", JSON.stringify(possibleMoves, null, 2))
 
     let bestMove: any = null;
@@ -34,12 +51,12 @@ export function doAiMove(squaresGame: SquaresGame): string | null {
         for (const lk of lineKeys) {
             // I'm not actully sure it matters if it's p1 or p2 here, as
             // we don't care about the score
-            _selectLineOnBoard(squaresGame.board, lk, "p2")
+            _selectLineOnBoard(board, lk, "p2")
         }
 
         // evaluate board state for opponent, get max points they can get
         console.log("getting possible moves for opponent if AI does", JSON.stringify(lineKeys))
-        const predictedOpponentMove = getSimpleBoardEvaluation(squaresGame.board)?.[0];
+        const predictedOpponentMove = getSimpleBoardEvaluation(board)?.[0];
 
         // calc score based on how many points we think opponent will get
         let opponentPoints;
@@ -47,13 +64,13 @@ export function doAiMove(squaresGame: SquaresGame): string | null {
             opponentPoints = predictedOpponentMove?.points
         }
         else {
-            console.assert(getScores(squaresGame.board).winner !== null, "assume no points as game is won by ai")
+            console.assert(getScores(board).winner !== null, "assume no points as game is won by ai")
             return lineKeys[0]; // lineKeys is not empty due to guard
         }
 
         // revert board back to original state 
         for (const lk of lineKeys) {
-            _unselectLineOnBoard(squaresGame.board, lk)
+            _unselectLineOnBoard(board, lk)
         }
 
         const score = points - opponentPoints;

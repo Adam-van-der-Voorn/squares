@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, setTimeoutP, useWindowDimensions } from "../util/simple";
 import { Grid } from "./Grid";
@@ -14,7 +14,7 @@ export function Game({ width, height, vsAI }: any) {
     const { windowHeight, windowWidth } = useWindowDimensions()
 
     const workerOpts = useMemo(() => ({ type: "module" }), [])
-    const promptAi = usePromiseWorker("ai.worker.rand.bundle.js", workerOpts as any)
+    const promptAi = usePromiseWorker("ai.worker.x.bundle.js", workerOpts as any)
 
     const rootStyles = getComputedStyle(document.documentElement)
 
