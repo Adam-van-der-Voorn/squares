@@ -4,6 +4,7 @@ import { getPxValue, setTimeoutP, useWindowDimensions } from "../util/simple";
 import { Grid } from "./Grid";
 import { SquaresGame, getScores, newGame, selectLine } from "../game";
 import { KeyedMessageEvent, usePromiseWorker } from "../util/usePromiseWorker";
+import { useDebugColoredOpponentLines } from "../util/debug_tools";
 
 const AI_DELAY = 300;
 
@@ -17,6 +18,8 @@ export function Game({ width, height, vsAI }: any) {
     const promptAi = usePromiseWorker("ai.worker.x.bundle.js", workerOpts as any)
 
     const rootStyles = getComputedStyle(document.documentElement)
+
+    const debugMarkLineAsOpponent = useDebugColoredOpponentLines()
 
     useLayoutEffect(() => {
         if (!ref.current) {
@@ -105,6 +108,7 @@ export function Game({ width, height, vsAI }: any) {
                     if (typeof lineKey !== 'string') {
                         return;
                     }
+                    debugMarkLineAsOpponent(lineKey)
                     selectLine(squaresGame, lineKey);
                     setSquaresGame({ ...squaresGame });
 

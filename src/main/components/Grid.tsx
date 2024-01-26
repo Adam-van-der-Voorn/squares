@@ -4,6 +4,7 @@ import { selectLine, getScores, SquaresGame } from "../game";
 import { ReactSetState, unpack } from "../util/simple";
 import { Line, Props as LineProps } from "./Line";
 import { Dots } from "./Dots";
+import { useDebugLineLabels } from "../util/debug_tools";
 
 export type Props = {
     rows: number;
@@ -18,6 +19,8 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
     if (!enabled) {
         hoveredLine = null;
     }
+
+    useDebugLineLabels();
 
     useEffect(() => {
         document.addEventListener('pointermove', handlePointerMove)
