@@ -7,6 +7,8 @@ type Move = {
     lineKeys: string[]
 }
 
+let selectionQueue: string[] = [];
+
 self.onmessage = (ev: KeyedMessageEvent) => {
     // validate message, we expect a baord in `message` (lines prop is proof enough) and a key
     // I have no idea why, but it seems that react devtools is triggering this event?
@@ -16,16 +18,24 @@ self.onmessage = (ev: KeyedMessageEvent) => {
         return;
     }
 
+    logcxt = { ...logcxt, movenum: logcxt.movenum + 1, iternum: 0, player: "ai" }
+
     const board = ev.data?.message as Board;
     const key = ev.data?.key
+    if (selectionQueue.length === 0) {
+        selectionQueue = getBestMove(board);
+        log("new selection queue =", JSON.stringify(selectionQueue))
+    }
+    else {
+        log("selection queue =", JSON.stringify(selectionQueue))
+    }
 
-    const lineKey = getBestMove(board)
+    const lineKey = selectionQueue[0]
+    selectionQueue = selectionQueue.slice(1)
     postMessage({ key, message: lineKey })
 }
 
-function getBestMove(board: Board): string | null {
-    logcxt = { ...logcxt, iternum: 0, player: "ai"}
-
+function getBestMove(board: Board): string[] {
     const avaliblePoints = unpack(board.cells)
         .filter(c => c.val.claim === null)
         .length
@@ -54,7 +64,7 @@ function getBestMove(board: Board): string | null {
             // if we do this move we will either have ended the match, or will have gotten more total points
             // than the player. As possibleMoves is sorted from highest points to lowest, this should return
             // as early as possible
-            return lineKeys[0]
+            return lineKeys;
         }
         // make the move on the board- this should be reverted later
         for (const lk of lineKeys) {
@@ -75,7 +85,7 @@ function getBestMove(board: Board): string | null {
         }
         else {
             console.assert(getScores(board).winner !== null, "assume no points as game is won by ai")
-            return lineKeys[0]; // lineKeys is not empty due to guard
+            return lineKeys; // lineKeys is not empty due to guard
         }
 
         // revert board back to original state 
@@ -86,15 +96,14 @@ function getBestMove(board: Board): string | null {
         const score = points - opponentPoints;
         log("outcome", { points, opponentPoints, predictedOpponentMove })
         if (!bestMove || score > bestMove.score) {
-            const lineKey = lineKeys[0]; // lineKeys is not empty due to guard
-            bestMove = { score, lineKey }
+            bestMove = { score, lineKeys }
             log("**\nbest move changed to", bestMove, "\n**")
         }
     }
+    logcxt = { ...logcxt, player: "ai"}
     log("best move", bestMove)
 
-    logcxt = { ...logcxt, movenum: logcxt.movenum + 1}
-    return bestMove.lineKey ?? null;
+    return bestMove.lineKeys ?? [];
 }
 
 function getHeuristicBoardEvaluation(board: Board) {
@@ -367,7 +376,7 @@ function log(...args: any[]) { l("log", ...args) }
 function err(...args: any[]) { l("err", ...args)}
 
 function l(kind: string, ...args: any[]) {
-    (console as any)[kind](`mv:${logcxt.movenum} ${logcxt.player} ${logcxt.iternum}`, ...args)
+    (console as any)[kind](`mv:${logcxt.movenum} ${logcxt.player} it:${logcxt.iternum}`, ...args)
 }
 
 // algo
