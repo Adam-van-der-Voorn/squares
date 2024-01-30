@@ -1,4 +1,4 @@
-import { Board, Cell, _selectLineOnBoard, _unselectLineOnBoard, getScores } from "../main/game";
+import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getScores, lineKey } from "../main/game";
 import { shuffle, unpack } from "../main/util/simple";
 import { KeyedMessageEvent } from "../main/util/usePromiseWorker";
 
@@ -19,24 +19,33 @@ self.onmessage = (ev: KeyedMessageEvent) => {
     const board = ev.data?.message as Board;
     const key = ev.data?.key
 
-    console.log("\n\n\n\nstart AI move:")
     const lineKey = getBestMove(board)
     postMessage({ key, message: lineKey })
 }
 
 function getBestMove(board: Board): string | null {
+    logcxt = { ...logcxt, iternum: 0, player: "ai"}
+
     const avaliblePoints = unpack(board.cells)
         .filter(c => c.val.claim === null)
         .length
     const { p1: currentOpponentPoints, p2: currentOwnPoints } = getScores(board);
 
-    const possibleMoves = getSimpleBoardEvaluation(board);
-    console.log("possible moves for ai:", JSON.stringify(possibleMoves, null, 2))
+    const possibleMoves = getHeuristicBoardEvaluation(board)
+
+    const _possibleMovesDisplay = possibleMoves.map(move => {
+        const lineKeys = move.lineKeys.map(lk => `${lk} (${getLineType(board, lk)})`);
+        return { ...move, lineKeys }
+    })
+
+
+    log("possible moves:", JSON.stringify(_possibleMovesDisplay, null, 2))
 
     let bestMove: any = null;
     for (const { lineKeys, points } of possibleMoves) {
+        logcxt = { ...logcxt, iternum: logcxt.iternum + 1, player: "you"}
         if (lineKeys.length === 0) {
-            console.error("this should not happen")
+            err("this should not happen")
             continue;
         }
 
@@ -55,8 +64,9 @@ function getBestMove(board: Board): string | null {
         }
 
         // evaluate board state for opponent, get max points they can get
-        console.log("getting possible moves for opponent if AI does", JSON.stringify(lineKeys))
-        const predictedOpponentMove = getSimpleBoardEvaluation(board)?.[0];
+        log("getting possible moves for opponent if AI does", JSON.stringify(lineKeys))
+        const predictedOpponentMoves = getSimpleBoardEvaluation(board);
+        const predictedOpponentMove = predictedOpponentMoves?.[0];
 
         // calc score based on how many points we think opponent will get
         let opponentPoints;
@@ -74,15 +84,35 @@ function getBestMove(board: Board): string | null {
         }
 
         const score = points - opponentPoints;
-        console.log("outcome", {points, opponentPoints, predictedOpponentMove})
+        log("outcome", { points, opponentPoints, predictedOpponentMove })
         if (!bestMove || score > bestMove.score) {
             const lineKey = lineKeys[0]; // lineKeys is not empty due to guard
             bestMove = { score, lineKey }
-            console.log("**\nbest move changed to", bestMove, "\n**")
+            log("**\nbest move changed to", bestMove, "\n**")
         }
     }
-    console.log("best move", bestMove)
+    log("best move", bestMove)
+
+    logcxt = { ...logcxt, movenum: logcxt.movenum + 1}
     return bestMove.lineKey ?? null;
+}
+
+function getHeuristicBoardEvaluation(board: Board) {
+    const tunnels = unpack(board.cells)
+        .flatMap(cellPos => {
+            const res = getTunnelLineKeys(board, cellPos)
+            return res === null ? [] : [res.keys]
+        })
+        .filter(lks => lks.length > 2)
+    log('known tunnels:', tunnels)
+
+    const boardEvaluation = getSimpleBoardEvaluation(board);
+    log("size of board evaluation", boardEvaluation.length)
+    const r = boardEvaluation.filter(move => {
+        return isMoveMakingMostOfTunnels(move, tunnels)
+    })
+    log("final size of board eval:", r.length, `(${r.length - boardEvaluation.length})`)
+    return r;
 }
 
 function getSimpleBoardEvaluation(board: Board) {
@@ -99,7 +129,7 @@ function getSimpleBoardEvaluation(board: Board) {
     for (const lk of avalibleLineKeys) {
         const points = simpleEvaluateMove(board, lk)
         // sort evaluated moves into buckets of moves that score points, and moves that don't
-        const move = { points, lineKeys: [lk]}
+        const move = { points, lineKeys: [lk] }
         if (points <= 0 || avalibleLineKeys.length === 1) {
             completeMoves[moveKey(move.lineKeys)] = move;
         }
@@ -153,7 +183,7 @@ function getSimpleBoardEvaluation(board: Board) {
     }
 
     if (limit <= 0) {
-        console.error("getPossibleMoves limit hit!")
+        err("getPossibleMoves limit hit!")
     }
 
     const choices = Object.values(completeMoves)
@@ -174,7 +204,7 @@ function simpleEvaluateMove(board: Board, lineKey: string): number {
             return 1;
         }
         else {
-            console.error("celltype should not be 'claimed' here. (line is unclaimed, only 1 adj cell)")
+            err("celltype should not be 'claimed' here. (line is unclaimed, only 1 adj cell)")
             return -9999;
         }
     }
@@ -197,6 +227,84 @@ function simpleEvaluateMove(board: Board, lineKey: string): number {
     }
 }
 
+function getTunnelLineKeys(board: Board, cellPos: CellPos, lineKeyToConsiderSelected?: string): { keys: string[] } | null {
+    const cell = board.cells[cellPos.y][cellPos.x];
+    // log("getTunnelLineKeys: ", JSON.stringify({lines: cell.lines, x: cellPos.x, y: cellPos.y, lineKeyToConSiderSelected: lineKeyToConsiderSelected}))
+
+    const unselectedLines = cell.lines
+        .map(lk => {
+            const { selected, cells } = board.lines[lk]
+            return { lineKey: lk, selected, cells }
+        })
+        .filter(l => {
+            if (lineKeyToConsiderSelected !== undefined) {
+                return l.lineKey !== lineKeyToConsiderSelected
+            }
+            return true;
+        })
+        .filter(l => !l.selected)
+
+    // log("unselectedLines=", unselectedLines)
+
+
+    if (unselectedLines.length !== 1) {
+        return null;
+    }
+
+    const unselectedLine = unselectedLines[0];
+
+    const otherCells = unselectedLine.cells
+        .filter(p => {
+            // log(`cell @ ${JSON.stringify(p)} is not og?`, !(p.x === cellPos.x && p.y === cellPos.y))
+            return !(p.x === cellPos.x && p.y == cellPos.y)
+        })
+    // log("otherCells", otherCells)
+    const nextCellPos = otherCells[0]
+
+    if (nextCellPos === undefined) {
+        // log(`next cell does not exist (i.e. tunnel leads off board)`)
+        return { keys: [unselectedLine.lineKey] };
+    }
+
+    const nextKeys = getTunnelLineKeys(board, nextCellPos, unselectedLine.lineKey)?.keys ?? [];
+    return { keys: [unselectedLine.lineKey, ...nextKeys] }
+}
+
+function isMoveMakingMostOfTunnels(move: Move, knownTunnels: string[][]) {
+    if (knownTunnels.length === 0) {
+        return true;
+    }
+    const tunnelRuns: Record<string, { tunnel: string[], len: number }> = {};
+    for (let i = 0; i < move.lineKeys.length; i++) {
+        const lk = move.lineKeys[i]
+        if (i >= move.lineKeys.length - 1) {
+            // if lk very last line in the move- this cannot be a part of the run
+            // so we now eval tunnel usage
+            for (const run of Object.values(tunnelRuns)) {
+                const { len, tunnel } = run;
+                if (len !== tunnel.length && len !== tunnel.length - 2) {
+                    // not making the most!
+                    log("run for tunnel", tunnel[0], "is", `${len}/${tunnel.length}`, "long, discarding move", JSON.stringify(move.lineKeys))
+                    return false;
+                }
+            }
+        }
+        else {
+            const tunnel = knownTunnels.find(t => t.find(tt => tt === lk))
+            if (tunnel) {
+                if (tunnelRuns[tunnel[0]] === undefined) {
+                    // create a new tunnel
+                    tunnelRuns[tunnel[0]] = { tunnel, len: 1 }
+                }
+                else {
+                    tunnelRuns[tunnel[0]].len += 1;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 /** @return goal, unsafe, free, claimed */
 function getCellType(board: Board, cell: Cell): "goal" | "unsafe" | "free" | "claimed" {
     if (cell.claim !== null) {
@@ -213,8 +321,53 @@ function getCellType(board: Board, cell: Cell): "goal" | "unsafe" | "free" | "cl
     return "goal"
 }
 
+function getLineType(board: Board, lineKey: string): "goal" | "unsafe" | "free" | string {
+    const line = board.lines[lineKey];
+    const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
+    if (adjacentCells.length == 1) {
+        // 1: simple case, max one point
+        const cellType = getCellType(board, adjacentCells[0])
+        if (cellType === "free" || cellType === "unsafe" || cellType === "goal") {
+            return cellType;
+        }
+        else {
+            err("celltype should not be 'claimed' here. (line is unclaimed, only 1 adj cell)")
+            return "claimed";
+        }
+    }
+    else {
+        // 2: possibly can get multiple points via tunnel
+        const a = getCellType(board, adjacentCells[0])
+        const b = getCellType(board, adjacentCells[1])
+        if (a === "goal" || b === "goal") {
+            return "goal";
+        }
+        else if (a === "unsafe" || b === "unsafe") {
+            return "unsafe";
+        }
+        else {
+            return "free";
+        }
+    }
+}
+
 function moveKey(lineKeys: string[]) {
     return [...lineKeys].sort().join(" ")
+}
+
+
+let logcxt = {
+    player: "ai",
+    movenum: 0,
+    iternum: 0,
+}
+
+function log(...args: any[]) { l("log", ...args) }
+
+function err(...args: any[]) { l("err", ...args)}
+
+function l(kind: string, ...args: any[]) {
+    (console as any)[kind](`mv:${logcxt.movenum} ${logcxt.player} ${logcxt.iternum}`, ...args)
 }
 
 // algo
