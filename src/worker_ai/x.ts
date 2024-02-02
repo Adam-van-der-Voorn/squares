@@ -138,25 +138,14 @@ function curateMoves(board: Board, avalibleMoves: string[], tunnels: Record<stri
     for (const lineKey of avalibleMoves) {
         const selectionKey = getSelectionKey(board, lineKey, tunnels);
         if (moveMap[selectionKey] === undefined) {
+            lx("log", "key for move", lineKey, "=", selectionKey, "(new)")
             moveMap[selectionKey] = lineKey;
+        }
+        else {
+            lx("log", "key for move", lineKey, "=", selectionKey, "(existing)")
         }
     }
     return Object.values(moveMap);
-}
-
-function curatePotentialMoves(board: Board, knownTunnels: Record<string, string[]>): string[] {
-    const avalibleLineKeysMap: Record<string, string> = {};
-    const allAvalibleLineKeys = Object.entries(board.lines)
-        .filter(e => !e[1].selected)
-        .map(e => e[0]);
-
-    for (const lineKey of allAvalibleLineKeys) {
-        const selectionKey = getSelectionKey(board, lineKey, knownTunnels);
-        if (avalibleLineKeysMap[selectionKey] === undefined) {
-            avalibleLineKeysMap[selectionKey] = lineKey;
-        }
-    }
-    return Object.values(avalibleLineKeysMap);
 }
 
 function getSimpleBoardEvaluation(board: Board, moves: string[]) {
@@ -265,49 +254,6 @@ function simpleEvaluateMove(board: Board, lineKey: string): number {
     }
 }
 
-function getClosedTunnelLineKeys(board: Board, cellPos: CellPos, lineKeyToConsiderSelected?: string): { keys: string[] } | null {
-    const cell = board.cells[cellPos.y][cellPos.x];
-    // lx("log", "getTunnelLineKeys: ", JSON.stringify({lines: cell.lines, x: cellPos.x, y: cellPos.y, lineKeyToConSiderSelected: lineKeyToConsiderSelected}))
-
-    const unselectedLines = cell.lines
-        .map(lk => {
-            const { selected, cells } = board.lines[lk]
-            return { lineKey: lk, selected, cells }
-        })
-        .filter(l => {
-            if (lineKeyToConsiderSelected !== undefined) {
-                return l.lineKey !== lineKeyToConsiderSelected
-            }
-            return true;
-        })
-        .filter(l => !l.selected)
-
-    // lx("log", "unselectedLines=", unselectedLines)
-
-
-    if (unselectedLines.length !== 1) {
-        return null;
-    }
-
-    const unselectedLine = unselectedLines[0];
-
-    const otherCells = unselectedLine.cells
-        .filter(p => {
-            // lx("log", `cell @ ${JSON.stringify(p)} is not og?`, !(p.x === cellPos.x && p.y === cellPos.y))
-            return !(p.x === cellPos.x && p.y == cellPos.y)
-        })
-    // lx("log", "otherCells", otherCells)
-    const nextCellPos = otherCells[0]
-
-    if (nextCellPos === undefined) {
-        // lx("log", `next cell does not exist (i.e. tunnel leads off board)`)
-        return { keys: [unselectedLine.lineKey] };
-    }
-
-    const nextKeys = getClosedTunnelLineKeys(board, nextCellPos, unselectedLine.lineKey)?.keys ?? [];
-    return { keys: [unselectedLine.lineKey, ...nextKeys] }
-}
-
 function getLinesForCellPos(board: Board, cellPos: CellPos): string[] {
     const cell = getCell(board, cellPos);
     if (cell !== undefined) {
@@ -318,7 +264,7 @@ function getLinesForCellPos(board: Board, cellPos: CellPos): string[] {
     const s = { x: cellPos.x, y: cellPos.y + 1 }
     const w = { x: cellPos.x - 1, y: cellPos.y }
     for (const adjCellPos of [n, s, e, w]) {
-        const lineKey = getSharedLine2(board, cellPos, adjCellPos)
+        const lineKey = getSharedLine(board, cellPos, adjCellPos)
         if (lineKey !== null) {
             return [lineKey];
         }
@@ -326,7 +272,7 @@ function getLinesForCellPos(board: Board, cellPos: CellPos): string[] {
     return [];
 }
 
-function getSharedLine2(board: Board, cellPosA: CellPos, cellPosB: CellPos): string | null {
+function getSharedLine(board: Board, cellPosA: CellPos, cellPosB: CellPos): string | null {
     const cellA = getCell(board, cellPosA);
     const cellB = getCell(board, cellPosB);
     let undefCellPos: CellPos, defCellPos: CellPos, defCell: Cell;
@@ -374,24 +320,13 @@ function getSharedLine2(board: Board, cellPosA: CellPos, cellPosB: CellPos): str
         }
     }
 
-    console.log("shared line:", { cellPosA, cellPosB, cellA, cellB, r, defCellPos, undefCellPos, result: ret()})
-
-
     return ret()
-}
-
-function getSharedLine(cellA: Cell, cellB: Cell): string {
-    const sharedLines = cellA.lines.filter(lk => {
-        return cellB.lines.includes(lk);
-    })
-    console.assert(sharedLines.length === 1)
-    return sharedLines[0];
 }
 
 function getTunnelLineKeys(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): string[] {
     const nextCell = getCell(board, nextCellPos);
 
-    const sharedLineKey = getSharedLine2(board, prevCellPos, nextCellPos);
+    const sharedLineKey = getSharedLine(board, prevCellPos, nextCellPos);
     if (!sharedLineKey) {
         throw "cells must be adjacent"
     }
@@ -423,7 +358,7 @@ function getTunnelLineKeys(board: Board, prevCellPos: CellPos, nextCellPos: Cell
     }
     const nextSharedLine = nextSharedLines[0]
 
-    lx("log", { nextSharedLines, prevCellPos, nextCellPos, sharedLineKey, nextCell, unselectedLines, sharedLineIsSelected })
+    // lx("log", { nextSharedLines, prevCellPos, nextCellPos, sharedLineKey, nextCell, unselectedLines, sharedLineIsSelected })
     
     const nextNextCellPos = nextSharedLine.cells
         // filter out self
@@ -441,7 +376,7 @@ function getTunnelLineKeys(board: Board, prevCellPos: CellPos, nextCellPos: Cell
 function isTunnelEntrance(board: Board, startingCellPos: CellPos, nextCellPos: CellPos): boolean {
     const nextCell = getCell(board, nextCellPos)
     if (nextCell !== undefined && getCellType(board, nextCell) === "unsafe") {
-        const sharedLineKey = getSharedLine2(board, startingCellPos, nextCellPos);
+        const sharedLineKey = getSharedLine(board, startingCellPos, nextCellPos);
         if (!sharedLineKey) {
             return false;
         }
@@ -483,147 +418,6 @@ function getTunnels(board: Board): Record<string, string[]> {
     }
     return tunnels;
 }
-
-// function getTunnels(board: Board): Tunnel[] {
-//     const tunnels: Tunnel[] = [];
-//     for (const { x, y, val: cell } of unpack(board.cells)) {
-//         if (!isCellTunnelEnd(board, { x, y })) {
-//             continue;
-//         }
-//         // we are trying to find the an end cell
-//         // things that indicate ane end cell are
-//         // - unsafe cell where one end is flush with the edge of the board
-//         // - unafe cell with at least one adjacent cell that is not unsafe
-//         // once an end cell is found, add all unselected lines on the cell to the tunnel
-//         // then use getTunnelLineKeys to get remaining linekeys
-
-//         const unselectedLineKeys: string[] = [];
-//         const adjacentCellPositions: CellPos[] = [];
-//         for (const lk of cell.lines) {
-//             const { selected, cells: cellPositions } = board.lines[lk]
-//             if (!selected) {
-//                 unselectedLineKeys.push(lk)
-//                 for (const cellPos of cellPositions) {
-//                     if (cellPos.x === x && cellPos.y === y) {
-//                         // do not include self
-//                         continue;
-//                     }
-//                     adjacentCellPositions.push(cellPos);
-//                 }
-//             }
-//         }
-//         // const adjacentCellPositions = cell.lines
-//         //     .map(lk => {
-//         //         const { selected, cells } = board.lines[lk]
-//         //         return { lineKey: lk, selected, cells }
-//         //     })
-//         //     .filter(l => !l.selected)
-//         //     .flatMap(l => l.cells)
-//         //     // filter out self
-//         //     .filter(pos => pos.x !== x || pos.y !== y)
-
-
-//         let nextCellPos: CellPos | null = null;
-//         if (adjacentCellPositions.length === 1) {
-//             // goal cell, or unsafe cell where one open end leads off board edge
-//             // const adjCell = getCell(board, adjacentCellPositions[0])
-//             // const sharedLine = getSharedLine(adjCell, cell)
-//             // const bruh =
-//             // const lineKeys = getTunnelLineKeys(board, { x, y },)
-//             nextCellPos = adjacentCellPositions[0]
-//         }
-//         else if (adjacentCellPositions.length === 2) {
-//             // this cell is a tunnel end, so we need to find it
-//             const unsafeAdjCellPositions = adjacentCellPositions
-//                 .filter(pos => {
-//                     const cell = getCell(board, pos)!;
-//                     console.assert(cell !== undefined, "pos should be valid")
-//                     if (getCellType(board, cell) === "unsafe")
-//                 });
-//             if (unsafeAdjCellPositions.length === 0) {
-//                 // special case- single length tunnel
-//                 tunnels.push({ id: "TODO", lineKeys: ["TODO - the line keys inbetween the 3 adj cells"] })
-//             }
-//             else if (unsafeAdjCellPositions.length === 1) {
-//                 // tunnel end
-//                 nextCellPos = unsafeAdjCellPositions[0];
-//             }
-//             else {
-//                 lx("error", "invalid state, a tunnel end cannot have > 1 adj unsafe cell")
-//             }
-//         }
-//         // const [lineKey, line] = remainingLines.pop()!
-//         // // const cellTypes = line.cells.map(pos => getCellType(board, board.cells[pos.y][pos.x]))
-//         // const lineType = getLineType(board, lineKey);
-//         // if (lineType === "goal" || lineType === "unsafe") {
-//         //     // [3][2][1][x][ ][ ][ ]
-//         //     const left = getTunnelLineKeys(board, line.cells[0], lineKey)?.keys ?? []
-//         //     // [ ][ ][ ][x][1][2][3]
-//         //     const right = line.cells[1]
-//         //         ? getTunnelLineKeys(board, line.cells[1], lineKey)?.keys ?? []
-//         //         : [];
-//         //     for (const lk of [...left, ...right]) {
-//         //         const idx = remainingLines.findIndex(([key, _]) => key === lk)
-//         //         remainingLines.splice(idx, 1)
-//         //     }
-
-//         //     // so the keys are in order
-//         //     // [l1][l2][l3][lineKey][r1][r2][r3]
-//         //     left.reverse() 
-//         //     const allKeys = [...left, lineKey, ...right];
-//         //     // we al
-//         // }
-//     }
-//     return tunnels;
-// }
-
-// function isCellTunnelEnd(board: Board, cellPos: CellPos): boolean {
-//     const cell = getCell(board, cellPos);
-//     const cellType = getCellType(board, cell);
-//     const adjacentCellPositions = cell.lines
-//         .map(lk => {
-//             const { selected, cells } = board.lines[lk]
-//             return { lineKey: lk, selected, cells }
-//         })
-//         .filter(l => !l.selected)
-//         .flatMap(l => l.cells)
-//         // filter out self
-//         .filter(p => p.x !== cellPos.x || p.y !== cellPos.y)
-
-//     // we are trying to find the an end cell
-//     // things that indicate an end cell are
-//     // - a goal cell
-//     // - unsafe cell where one end is flush with the edge of the board
-//     // - unafe cell with at least one adjacent cell that is not unsafe or gaol
-//     // once an end cell is found, add all unselected lines on the cell to the tunnel
-//     // then use getTunnelLineKeys to get remaining linekeys
-//     if (cellType === "goal") {
-//         return true
-//     }
-//     if (cellType === "unsafe") {
-//         let nextCell: CellPos | null = null;
-//         if (adjacentCellPositions.length === 1) {
-//             // unsafe cell where one open end leads off board edge
-//             return true
-//         }
-//         else if (adjacentCellPositions.length === 2) {
-//             const freeAdjCellPositions = adjacentCellPositions
-//                 .filter(pos => {
-//                     const ct = getCellType(board, getCell(board, pos));
-//                     return ct === "free"
-//                 });
-//             if (freeAdjCellPositions.length >= 1) {
-//                 console.assert(freeAdjCellPositions.length <= 2)
-//                 // 2 is special case- single length tunnel
-//                 return true
-//             }
-//         }
-//         else {
-//             lx("error", "invalid state, unsafe cell must have 1 or 2 adj cells")
-//         }
-//     }
-//     return false;
-// }
 
 function isMoveMakingMostOfTunnels(move: Move, knownTunnels: string[][]) {
     if (knownTunnels.length === 0) {
@@ -719,16 +513,25 @@ function getSelectionKey(board: Board, lineKey: string, knownTunnels: Record<str
         return lineKey;
     }
     const [tunnelKey, lineKeys] = ownership;
+    lx("log", "getSelectionKey:", `\nSTART`)
+    lx("log", "getSelectionKey:", `${lineKey} is part of tunnel ${tunnelKey}`)
     if (lineKeys.length === 1) {
+        lx("log", "getSelectionKey:", `lk is single length tunnel, returning ${tunnelKey}`)
         return `${tunnelKey}`
     }
+
+    const isLineTypeSelected = (lk: string) => getLineType(board, lk) === "selected";
+    const isLineOnBoardEdge = (lk: string) => board.lines[lk].cells.length === 1;
     const locationInTunnel = lineKeys.findIndex(lk => lk === lineKey);
-    const leftEndClosed = getLineType(board, lineKeys[0]);
-    if (!leftEndClosed && locationInTunnel === 0) {
+    lx("log", "getSelectionKey:", `stats:`, {
+        locationInTunnel,
+        isLineOnBoardEdge: isLineOnBoardEdge(lineKey),
+        isLineTypeSelected: isLineTypeSelected(lineKey)
+    })
+    if (locationInTunnel === 0 && (isLineOnBoardEdge(lineKey) || isLineTypeSelected(lineKey))) {
         return `${tunnelKey}-start`
     }
-    const rightEndClosed = getLineType(board, lineKeys[lineKeys.length - 1]);
-    if (!rightEndClosed && locationInTunnel === lineKeys.length - 1) {
+    if (locationInTunnel === lineKeys.length - 1 && (isLineOnBoardEdge(lineKey) || isLineTypeSelected(lineKey))) {
         return `${tunnelKey}-end`
     }
     return `${tunnelKey}-mid`
