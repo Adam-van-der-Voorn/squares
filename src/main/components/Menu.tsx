@@ -7,8 +7,8 @@ export type Props = {
 const MIN_DOTS = 2, MAX_DOTS = 30;
 
 export function Menu({ onStart }: Props) {
-    const [width, setWidth] = useState("5");
-    const [height, setHeight] = useState("4");
+    const [width, setWidth] = useState("6");
+    const [height, setHeight] = useState("6");
     const widthNum = parseInt(width);
     const heightNum = parseInt(height);
 

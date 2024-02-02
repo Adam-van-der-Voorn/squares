@@ -69,7 +69,7 @@ function newBoard(numCellsX: number, numCellsY: number): Board {
             const e = lineKey({ x: coli + 1, y: rowi, horiOrVert: "v" });
             const s = lineKey({ x: coli, y: rowi + 1, horiOrVert: "h" });
             const w = lineKey({ x: coli, y: rowi, horiOrVert: "v" });
-            row.push({ lines: [n, s, e, w], claim: null })
+            row.push({ lines: [n, e, s, w], claim: null })
         }
     }
 
@@ -175,5 +175,12 @@ export function getScores(board: Board) {
         winner = "tie"
     }
     return { ...claims, winner }
+}
+
+export function getCell(board: Board, pos: CellPos): Cell | undefined {
+    if (pos.x < 0 || pos.y < 0) {
+        return undefined;
+    }
+    return board.cells?.[pos.y]?.[pos.x]
 }
 
