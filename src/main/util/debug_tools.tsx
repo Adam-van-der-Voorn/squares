@@ -37,11 +37,12 @@ export function useDebugLineLabels() {
                 const rect = line.getBoundingClientRect()
                 const label = document.createElement('div')
                 label.style.color = "red"
+                label.style.fontSize = "11px"
                 label.style.backgroundColor = "white"
-                label.style.display = "inline"
+                label.style.display = "inline-block"
                 label.style.position = "absolute"
-                label.style.top = `${rect.height/3}px`;
-                label.style.left = `${rect.width/3}px`;
+                label.style.top = `${rect.height/4}px`;
+                label.style.left = `${rect.width/4}px`;
                 label.innerText = line.getAttribute("data-key") ?? ""
                 line.appendChild(label)
             })
