@@ -41,8 +41,9 @@ export function useDebugLineLabels() {
                 label.style.backgroundColor = "white"
                 label.style.display = "inline-block"
                 label.style.position = "absolute"
-                label.style.top = `${rect.height/4}px`;
-                label.style.left = `${rect.width/4}px`;
+                label.style.top = `50%`;
+                label.style.left = `50%`;
+                label.className = "line-label"
                 label.innerText = line.getAttribute("data-key") ?? ""
                 line.appendChild(label)
             })
