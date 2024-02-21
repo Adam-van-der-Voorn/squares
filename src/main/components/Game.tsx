@@ -2,9 +2,9 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, setTimeoutP, useWindowDimensions } from "../util/simple";
 import { Grid } from "./Grid";
-import { SquaresGame, getScores, newGame, selectLine } from "../game";
-import { KeyedMessageEvent, usePromiseWorker } from "../util/usePromiseWorker";
-import { useDebugColoredOpponentLines } from "../util/debug_tools";
+import { SquaresGame, getScores, newGame, selectLine, setMoveListener } from "../game";
+import { KeyedMessageEvent, usePromiseWorker } from "../util/promiseWorker";
+import { useDebugColoredOpponentLines, useDebugMoveSeqs } from "../util/debug_tools";
 
 const AI_DELAY = 300;
 
@@ -20,6 +20,7 @@ export function Game({ width, height, vsAI }: any) {
     const rootStyles = getComputedStyle(document.documentElement)
 
     const debugMarkLineAsOpponent = useDebugColoredOpponentLines()
+    useDebugMoveSeqs(squaresGame, setSquaresGame, height, width);
 
     useLayoutEffect(() => {
         if (!ref.current) {
@@ -111,7 +112,6 @@ export function Game({ width, height, vsAI }: any) {
                     debugMarkLineAsOpponent(lineKey)
                     selectLine(squaresGame, lineKey);
                     setSquaresGame({ ...squaresGame });
-
                 })
             }
         }

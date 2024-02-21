@@ -1,5 +1,5 @@
 import { Board } from "../main/game";
-import { KeyedMessageEvent } from "../main/util/usePromiseWorker";
+import { KeyedMessageEvent } from "../main/util/promiseWorker";
 
 self.onmessage = (ev: KeyedMessageEvent) => {
     // validate message, we expect a baord in `message` (lines prop is proof enough) and a key

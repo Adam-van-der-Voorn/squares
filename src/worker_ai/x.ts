@@ -1,6 +1,6 @@
 import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, boardDimensions as getBoardDimensions, getCell, getScores, lineKey } from "../main/game";
 import { shuffle, unpack } from "../main/util/simple";
-import { KeyedMessageEvent } from "../main/util/usePromiseWorker";
+import { KeyedMessageEvent } from "../main/util/promiseWorker";
 
 type Move = {
     points: number,
@@ -18,7 +18,7 @@ self.onmessage = (ev: KeyedMessageEvent) => {
         return;
     }
 
-    logcxt = { ...logcxt, movenum: logcxt.movenum + 1, iternum: 0, player: "ai" }
+    logcxt = { ...logcxt, movenum: logcxt.movenum + 1, player: "ai" }
 
     const board = ev.data?.message as Board;
     const key = ev.data?.key
@@ -43,16 +43,9 @@ function getBestMove(board: Board): string[] {
 
     const possibleMoves = getHeuristicBoardEvaluation(board)
 
-    const _possibleMovesDisplay = possibleMoves.map(move => {
-        const lineKeys = move.lineKeys.map(lk => `${lk} (${getLineType(board, lk)})`);
-        return { ...move, lineKeys }
-    })
-
-    lx("log", "possible moves:", JSON.stringify(_possibleMovesDisplay, null, 2))
-
     let bestMove: any = null;
     for (const { lineKeys, points } of possibleMoves) {
-        logcxt = { ...logcxt, iternum: logcxt.iternum + 1, player: "you" }
+        logcxt = { ...logcxt, player: "you" }
         if (lineKeys.length === 0) {
             lx("error", "this should not happen")
             continue;
@@ -73,12 +66,11 @@ function getBestMove(board: Board): string[] {
         }
 
         // evaluate board state for opponent, get max points they can get
-        lx("log", "getting possible moves for opponent if AI does", JSON.stringify(lineKeys))
         const possibleMoves = Object.entries(board.lines)
             .filter(e => !e[1].selected)
             .map(e => e[0]);
         shuffle(possibleMoves);
-        const predictedOpponentMoves = getSimpleBoardEvaluation(board, possibleMoves);
+        const predictedOpponentMoves = getSimpleBoardEvaluation(board, possibleMoves, (_, allMoves) => allMoves);
         const predictedOpponentMove = predictedOpponentMoves?.[0];
 
         // calc score based on how many points we think opponent will get
@@ -111,18 +103,16 @@ function getBestMove(board: Board): string[] {
 
 function getHeuristicBoardEvaluation(board: Board) {
     const tunnels = getTunnels(board);
-    lx("log", 'tunnels:', tunnels)
+    // lx("log", 'tunnels:', tunnels)
 
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
     shuffle(allPotentialMoves);
     lx("log", 'num potenteial moves:', allPotentialMoves.length)
+    // lx("log", "potenteial moves:", getMoveList(board, allPotentialMoves, "[all-moves] "))
 
-    const curatedMoves = curateMoves(board, allPotentialMoves, tunnels);
-    lx("log", 'num curated moves:', curatedMoves.length, `(${curatedMoves.length - allPotentialMoves.length})`)
-
-    const boardEvaluation = getSimpleBoardEvaluation(board, curatedMoves);
+    const boardEvaluation = getSimpleBoardEvaluation(board, allPotentialMoves, (b, allMoves) => curateMoves(b, allMoves, tunnels));
     lx("log", "num of moves after board evaluation", boardEvaluation.length)
 
     const res = boardEvaluation.filter(move => {
@@ -148,16 +138,17 @@ function curateMoves(board: Board, avalibleMoves: string[], tunnels: Record<stri
     return Object.values(moveMap);
 }
 
-function getSimpleBoardEvaluation(board: Board, moves: string[]) {
+function getSimpleBoardEvaluation(board: Board, allMoves: string[], curateMovesBasedOnBoard: (board: Board, allMoves: string[]) => string[]) {
     const completeMoveSeqs: Record<string, Move> = {};
     let incompleteMoveSeqs: Move[] = []
+    let curatedMoves = curateMovesBasedOnBoard(board, allMoves);
 
     // first iteration
-    for (const lineKey of moves) {
+    for (const lineKey of curatedMoves) {
         const points = simpleEvaluateMove(board, lineKey)
         // sort evaluated moves into buckets of moves that score points, and moves that don't
         const moveSeq = { points, lineKeys: [lineKey] }
-        if (points <= 0 || moves.length === 1) {
+        if (points <= 0 || allMoves.length === 1) {
             completeMoveSeqs[moveKey(moveSeq.lineKeys)] = moveSeq;
         }
         else {
@@ -175,11 +166,15 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
             for (const lk of moveSeq.lineKeys) {
                 _selectLineOnBoard(board, lk, "p2")
             }
-            const remainingMoves = moves
-                // only process unselected lines
-                .filter(lk => !moveSeq.lineKeys.includes(lk))
+            
+            logcxt.prefix = `eval partial ai move ${moveSeq.lineKeys.join(" ")}`;
+            // only process unselected lines
+            const remainingMoves = allMoves.filter(lk => !moveSeq.lineKeys.includes(lk))
+            const avalibleMoves = curateMovesBasedOnBoard(board, remainingMoves)
+            lx("log", 'num curated moves:', curatedMoves.length, `(${curatedMoves.length - allMoves.length})`)
+            lx("log", "curated moves:", getMoveList(board, curatedMoves, "[curated-moves] "))
 
-            for (const lk of remainingMoves) {
+            for (const lk of avalibleMoves) {
                 const newLineKeys = [...moveSeq.lineKeys, lk];
                 const newMoveKey: string = moveKey(newLineKeys);
                 if (completeMoveSeqs[newMoveKey]) {
@@ -193,13 +188,15 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
                 }
 
                 // sort evaluated moves into buckets of moves that score points, and moves that don't
-                if (singleMovePoints <= 0 || aggregatedMove.lineKeys.length >= moves.length) {
+                if (singleMovePoints <= 0 || aggregatedMove.lineKeys.length >= allMoves.length) {
+                    // latest move in seq has scored 0 points, or move has used up all avalible moves
                     completeMoveSeqs[newMoveKey] = aggregatedMove;
                 }
                 else {
                     furtherIncompleteMoveSeqs.push(aggregatedMove);
                 }
             }
+            logcxt.prefix = ``;
 
             // revert board back to original state 
             for (const lk of moveSeq.lineKeys) {
@@ -475,7 +472,7 @@ function getLineType(board: Board, lineKey: string): "goal" | "unsafe" | "free" 
     if (line.selected) {
         return "selected";
     }
-    const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
+    const adjacentCells = line.cells.map(cellPos => getCell(board, cellPos)!)
     if (adjacentCells.length == 1) {
         // 1: simple case, max one point
         const cellType = getCellType(board, adjacentCells[0])
@@ -513,25 +510,22 @@ function getSelectionKey(board: Board, lineKey: string, knownTunnels: Record<str
         return lineKey;
     }
     const [tunnelKey, lineKeys] = ownership;
-    lx("log", "getSelectionKey:", `\nSTART`)
-    lx("log", "getSelectionKey:", `${lineKey} is part of tunnel ${tunnelKey}`)
     if (lineKeys.length === 1) {
-        lx("log", "getSelectionKey:", `lk is single length tunnel, returning ${tunnelKey}`)
         return `${tunnelKey}`
     }
 
-    const isLineTypeSelected = (lk: string) => getLineType(board, lk) === "selected";
+    const isLineTypeUnsafe = (lk: string) => getLineType(board, lk) === "unsafe";
     const isLineOnBoardEdge = (lk: string) => board.lines[lk].cells.length === 1;
     const locationInTunnel = lineKeys.findIndex(lk => lk === lineKey);
-    lx("log", "getSelectionKey:", `stats:`, {
+    lx("log", "getSelectionKey:", `stats for ${lineKey}:`, {
         locationInTunnel,
         isLineOnBoardEdge: isLineOnBoardEdge(lineKey),
-        isLineTypeSelected: isLineTypeSelected(lineKey)
+        isLineTypeUnsafe: isLineTypeUnsafe(lineKey)
     })
-    if (locationInTunnel === 0 && (isLineOnBoardEdge(lineKey) || isLineTypeSelected(lineKey))) {
+    if (locationInTunnel === 0 && (isLineOnBoardEdge(lineKey) || !isLineTypeUnsafe(lineKey))) {
         return `${tunnelKey}-start`
     }
-    if (locationInTunnel === lineKeys.length - 1 && (isLineOnBoardEdge(lineKey) || isLineTypeSelected(lineKey))) {
+    if (locationInTunnel === lineKeys.length - 1 && (isLineOnBoardEdge(lineKey) || !isLineTypeUnsafe(lineKey))) {
         return `${tunnelKey}-end`
     }
     return `${tunnelKey}-mid`
@@ -571,11 +565,37 @@ function getTunnelKey(board: Board, startLk: string, endLk: string) {
 let logcxt = {
     player: "ai",
     movenum: 0,
-    iternum: 0,
+    prefix: "",
 }
 
 function lx(kind: string, ...args: any[]) {
-    (console as any)[kind](`mv:${logcxt.movenum} ${logcxt.player} it:${logcxt.iternum}`, ...args)
+    const prefix = logcxt.prefix !== ""
+        ? ` [${logcxt.prefix}]`
+        : "";
+    (console as any)[kind](`mv:${logcxt.movenum}${prefix}`, ...args)
+}
+
+function getMoveList(board: Board, moveList: Move[] | string[], prefix: string) {
+    const moveListAnnotated = moveList.map(move => {
+        let lineKeys0, points;
+        if (typeof move === 'string') {
+            lineKeys0 = [move]
+            points = undefined;
+        }
+        else {
+            lineKeys0 = move.lineKeys;
+            points = move.points;
+        }
+        let s = lineKeys0
+            .map(lk => `${lk} (${getLineType(board, lk)})`)
+            .join("\n");
+        if (points !== undefined) {
+            s += "\npoints: " + points
+        }
+        return s;
+    })
+
+    return moveListAnnotated
 }
 
 // algo

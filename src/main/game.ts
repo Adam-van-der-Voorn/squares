@@ -30,6 +30,7 @@ export type Board = {
 export type SquaresGame = {
     turn: PlayerKey,
     board: Board,
+    moveListeners: Record<string, (move: string) => void>,
 }
 
 function newUninitalisedLine(key: LineKey): Line {
@@ -104,7 +105,8 @@ function newBoard(numCellsX: number, numCellsY: number): Board {
 export function newGame(numCellsX: number, numCellsY: number): SquaresGame {
     return {
         board: newBoard(numCellsX, numCellsY),
-        turn: "p1"
+        turn: "p1",
+        moveListeners: {}
     }
 }
 
@@ -120,6 +122,9 @@ export function selectLine(game: SquaresGame, lineKey: string): void {
     const claimedCells = _selectLineOnBoard(game.board, lineKey, game.turn)
     if (claimedCells.length === 0) {
         game.turn = game.turn === "p1" ? "p2" : "p1";
+    }
+    for (const ml of Object.values(game.moveListeners)) {
+        ml(lineKey)
     }
 }
 
@@ -182,5 +187,9 @@ export function getCell(board: Board, pos: CellPos): Cell | undefined {
         return undefined;
     }
     return board.cells?.[pos.y]?.[pos.x]
+}
+
+export function setMoveListener(game: SquaresGame, key: string, fn: (move: string) => void) {
+    game.moveListeners[key] = fn
 }
 

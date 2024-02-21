@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SquaresGame, selectLine, setMoveListener } from "../game";
 
 const DEBUG_COLORED_OPPONENT_LINES = true;
 
@@ -49,4 +50,20 @@ export function useDebugLineLabels() {
             })
             
     }, [])
+}
+
+// so we can reproduce matches in tests, and vice versa
+export function useDebugMoveSeqs(squaresGame: SquaresGame, setSquaresGame: any, height: number, width: number) {
+    let [moveList, setMoveList] = useState<string[]>([])
+    useEffect(() => {
+        (window as any)._squares_applyMoveSeq = (seq: string[]) => {
+            seq.forEach((lk: string) => selectLine(squaresGame, lk))
+            setSquaresGame({...squaresGame})
+        }
+        setMoveListener(squaresGame, "debug-listener", lk => {
+            const newMoveList = [...moveList, lk]
+            console.log("history\n", JSON.stringify({ rows: height, cols: width, moves: newMoveList }))
+            setMoveList(newMoveList)
+        })
+    })
 }
