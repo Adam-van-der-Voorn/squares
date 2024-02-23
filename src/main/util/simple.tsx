@@ -36,14 +36,17 @@ export function getPxValue(style: CSSStyleDeclaration, key: string) {
 }
 
 /** https://stackoverflow.com/a/2450976/15250790 */
-export function shuffle<T>(array: Array<T>): T[] {
+export function shuffle<T>(array: Array<T>, seed?: number): T[] {
+    const rand = seed
+        ? mulberry32(seed)
+        : Math.random
     let currentIndex = array.length, randomIndex;
 
     // While there remain elements to shuffle.
     while (currentIndex > 0) {
 
         // Pick a remaining element.
-        randomIndex = Math.floor(Math.random() * currentIndex);
+        randomIndex = Math.floor(rand() * currentIndex);
         currentIndex--;
 
         // And swap it with the current element.
@@ -58,4 +61,13 @@ export async function setTimeoutP(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(() => resolve(), ms)
     })
+}
+
+function mulberry32(a: number) {
+    return function() {
+      var t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
 }

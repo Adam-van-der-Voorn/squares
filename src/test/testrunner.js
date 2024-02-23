@@ -9,10 +9,10 @@ export const test = async (testName, fn) => {
         res = e;
     }
     if (res === undefined) {
-        console.log("PASS:", testName)
+        console.log("testres PASS:", testName)
     }
     else {
-        console.error("FAIL:", testName, "\n", res)
+        console.error("testres FAIL:", testName, "\n", res)
     }
 }
 
@@ -24,4 +24,24 @@ export const gameWithState = (state) => {
     }
     return game;
     
+}
+
+export const aiTest = async (state, evalBoard, expectedMoveSet) => {
+    const game = gameWithState(state)
+    let actualMoves = [];
+    for (let i = 0; i < expectedMoveSet.length; i++) {
+        if (actualMoves.length === expectedMoveSet.length) {
+            return; // pass
+        }
+        if (game.turn !== "p2") {
+            return "no longer ai's turn, actual moves = " + JSON.stringify(actualMoves)
+        }
+        const result = await evalBoard(game.board);
+        const chosenLineKey = result?.data?.message;
+        selectLine(game, chosenLineKey);
+        actualMoves.push(chosenLineKey);
+        if (!expectedMoveSet.includes(chosenLineKey)) {
+            return "chosen move " + chosenLineKey + " not in expected moveset, actual moves = " + JSON.stringify(actualMoves);
+        }
+    }
 }
