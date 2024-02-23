@@ -5,10 +5,14 @@
   },
   "scripts": {
     "build": "webpack --mode=production",
-    "build:dev": "webpack --mode=development --watch"
+    "build:dev": "webpack --mode=development --watch",
+    "test": "playwright test",
+    "test:open": "playwright test --ui"
   },
   "devDependencies": {
     "@babel/preset-react": "^7.22.15",
+    "@playwright/test": "^1.41.2",
+    "@types/node": "^20.11.20",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "babel-loader": "^9.1.3",

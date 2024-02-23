@@ -48,7 +48,10 @@ export function usePromiseWorkerOld(workerFilename: string, workerOpts?: WorkerO
 
 const noop = () => { return undefined }
 
-export function usePromiseWorker(workerFilename: string, workerOpts?: WorkerOptions): WorkerRequest {
+export function usePromiseWorker(workerFilename: string | undefined, workerOpts?: WorkerOptions): WorkerRequest {
+    if (workerFilename === undefined) {
+        return () => { return undefined }
+    }
     const internalWorkerRequestRef = useRef<(message: unknown) => Promise<KeyedMessageEvent> | undefined>(noop);
 
     const workerRequest = useCallback((message: unknown) => {
