@@ -16,7 +16,16 @@ self.onmessage = (ev: KeyedMessageEvent) => {
     const board = ev.data?.message as Board;
     const key = ev.data?.key
     if (selectionQueue.length === 0) {
-        selectionQueue = getBestMove(board);
+        try {
+            console.time("ai-move")
+            selectionQueue = getBestMove(board);
+        }
+        catch (e) {
+            console.error("ai failed to get a move", e)
+        }
+        finally {
+            console.timeEnd("ai-move")
+        }
         console["log"]("new selection queue =", JSON.stringify(selectionQueue))
     }
     else {

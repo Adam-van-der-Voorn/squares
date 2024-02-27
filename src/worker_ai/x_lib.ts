@@ -20,6 +20,12 @@ type GoalTunnel = {
 }
 
 export function getBestMove(board: Board): string[] {
+    const res = _getBestMove(board);
+    logcxt.movenum += 1;
+    return res;
+}
+
+function _getBestMove(board: Board): string[] {
     const avaliblePoints = unpack(board.cells)
         .filter(c => c.val.claim === null)
         .length
@@ -28,8 +34,11 @@ export function getBestMove(board: Board): string[] {
     const possibleMoves = getHeuristicBoardEvaluation(board)
 
     let bestMove: any = null;
+    let counter = 0;
+    // predict opponent response
     for (const { lineKeys, points } of possibleMoves) {
-        logcxt = { ...logcxt, player: "you" }
+        logcxt.prefix =`por-${counter}/${possibleMoves.length}`;
+        counter++
         if (lineKeys.length === 0) {
             lx("error", "this should not happen")
             continue;
@@ -42,6 +51,7 @@ export function getBestMove(board: Board): string[] {
             // as early as possible
             return lineKeys;
         }
+
         // make the move on the board- this should be reverted later
         for (const lk of lineKeys) {
             // I'm not actully sure it matters if it's p1 or p2 here, as
@@ -50,11 +60,12 @@ export function getBestMove(board: Board): string[] {
         }
 
         // evaluate board state for opponent, get max points they can get
-        const possibleMoves = Object.entries(board.lines)
+        const possibleMoves2 = Object.entries(board.lines)
             .filter(e => !e[1].selected)
             .map(e => e[0]);
-        shuffle(possibleMoves, RNG_SEED);
-        const predictedOpponentMoves = getSimpleBoardEvaluation(board, possibleMoves);
+        shuffle(possibleMoves2, RNG_SEED);
+        const predictedOpponentMoves = getSimpleBoardEvaluation(board, possibleMoves2);
+        // const predictedOpponentMoves = getHeuristicBoardEvaluation(board);
         const predictedOpponentMove = predictedOpponentMoves?.[0];
 
         // calc score based on how many points we think opponent will get
@@ -73,28 +84,28 @@ export function getBestMove(board: Board): string[] {
         }
 
         const score = points - opponentPoints;
-        lx("log", "outcome", { points, opponentPoints, predictedOpponentMove })
+        lxd("outcome: score=", score, "points=", points, "opponentPoints=", opponentPoints)
         if (!bestMove || score > bestMove.score) {
             bestMove = { score, lineKeys }
-            lx("log", "**\nbest move changed to", bestMove, "\n**")
+            lxd("best move changed to", JSON.stringify(bestMove))
         }
     }
-    logcxt = { ...logcxt, player: "ai" }
-    lx("log", "best move", bestMove)
+    logcxt.prefix = ""
+    lx("log", "best move", JSON.stringify(bestMove))
 
     return bestMove.lineKeys ?? [];
 }
 
 function getHeuristicBoardEvaluation(board: Board) {
     const tunnelLineKeys = getTunnelLineKeys(board);
-    lx("log", 'tunnels:', tunnelLineKeys)
+    lxd('tunnels:', JSON.stringify(tunnelLineKeys, null, 2))
 
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
     shuffle(allPotentialMoves, RNG_SEED);
-    lx("log", 'num potenteial moves:', allPotentialMoves.length)
-    // lx("log", "potenteial moves:", getMoveList(board, allPotentialMoves, "[all-moves] "))
+    lxd( 'num potenteial moves:', allPotentialMoves.length)
+    // lxd( "potenteial moves:", getMoveList(board, allPotentialMoves, "[all-moves] "))
 
     // get all the tunnels with at least one closed end ("goal tunnels")
     // this will also very handily get you all the goal lines
@@ -115,7 +126,7 @@ function getHeuristicBoardEvaluation(board: Board) {
             }
             return { sortedLineKeys, isFullyClosed: tunnel.isEndClosed && tunnel.isStartClosed }
         })
-    lx("log", 'goal tunnels:', tunnelLineKeys)
+    lxd('goal tunnels:', JSON.stringify(goalTunnels))
 
     // a closed goal tunnel with < 3 lines is a turn ender
     // An open goal tunnel with < 2 lines is a turn ender
@@ -132,13 +143,20 @@ function getHeuristicBoardEvaluation(board: Board) {
         tunnelWhichCanBeSelectedAndEndTheTurn = goalTunnels.splice(tunnelWhichCanBeSelectedAndEndTheTurnIdx, 1)[0]
         finalMoveSeq = getTunnelSemiSelection(tunnelWhichCanBeSelectedAndEndTheTurn)
     }
+    lxd("tunnel that can be selected and end the turn", JSON.stringify(tunnelWhichCanBeSelectedAndEndTheTurn))
+
     // add all closed tunnels except Tunnel A to seqence of moves we will def do
     const alwaysMoves = [
         ...goalTunnels.flatMap(t => t.sortedLineKeys),
         ...finalMoveSeq
     ]
 
-    lx("log", "always moves", alwaysMoves)
+    const alwaysMovesEvaluated: Move = {
+        points: simpleEvaluateMoveSeq(board, alwaysMoves),
+        lineKeys: alwaysMoves
+    }
+
+    lxd("always moves", JSON.stringify(alwaysMoves))
 
     for (const m of alwaysMoves) {
         _selectLineOnBoard(board, m, "p2")
@@ -146,22 +164,28 @@ function getHeuristicBoardEvaluation(board: Board) {
 
     // remove lines from this seq from allPotentialMoves, and pass to curation fn
     const remainingMoves = allPotentialMoves.filter(m => !alwaysMoves.includes(m))
-    lx("log", "num moves after always moves are rm'ed", remainingMoves.length)
+    lxd("num moves after always moves are rm'ed", remainingMoves.length)
+
+    if (remainingMoves.length === 0) {
+        // always moves are all the remaining moves
+        return [alwaysMovesEvaluated]
+    }
 
     const curatedMoves = curateMoves(board, remainingMoves, tunnelLineKeys);
-    lx("log", 'num moves after curation:', curatedMoves.length)
+    lxd('num moves after curation:', curatedMoves.length)
 
     const boardEvaluation = getSimpleBoardEvaluation(board, curatedMoves);
-    lx("log", "num of moves seqs from board evaluation", boardEvaluation.length)
+    lxd("num of moves seqs from board evaluation", boardEvaluation.length)
 
     for (const m of alwaysMoves) {
         _unselectLineOnBoard(board, m)
     }
 
-    // const res = boardEvaluation.filter(move => {
-    //     return isMoveMakingMostOfTunnels(move, Object.values(tunnelLineKeys))
-    // })
-    return boardEvaluation;
+    return boardEvaluation.map(move => {
+        const lineKeys = [...alwaysMoves, ...move.lineKeys]
+        const points = alwaysMovesEvaluated.points + move.points;
+        return { points, lineKeys}
+    });
 }
 
 /** 
@@ -169,22 +193,25 @@ function getHeuristicBoardEvaluation(board: Board) {
  * @return selection as a linekey seq
  */
 function getTunnelSemiSelection(tunnel: GoalTunnel): string[] {
+    lxd("semi select tunnel", tunnel)
     const tunnelLen = tunnel.sortedLineKeys.length;
     const isReadyToEndTurn = tunnel.isFullyClosed
-        ? (i: number) => i + 4 >= tunnelLen
-        : (i: number) => i + 3 >= tunnelLen
+        ? (i: number) => i + 3 >= tunnelLen
+        : (i: number) => i + 2 >= tunnelLen
 
     const selections = []
     for (let i = 0; i < tunnelLen; i ++) {
-        if (isReadyToEndTurn(1)) {
-            // we end turn by placing a line with a gap, so we don't make a square
-            const lk = tunnel.sortedLineKeys[i + 2];
-            if (lk) {
-                selections.push(lk)
-            }
+        if (isReadyToEndTurn(i)) {
+            // the correct way to follow up from this semi selection is to either: 
+            // - fully select the tunnel (leaving you with a mandatory extra selection)
+            // - select i + 1 (getting the optimal amount of points from the tunnel while still ending your turn)
+            // currently this knowedge is not used, but in theory via brute force we will come to the same conclusion
+            // but it is still on the cards for future optimisations
+            lxd("semi select tunnel end:", i)
             return selections;
         }
         else {
+            lxd("semi select tunnel:", i, tunnel.sortedLineKeys[i])
             selections.push(tunnel.sortedLineKeys[i])
         }
     }
@@ -196,11 +223,11 @@ function curateMoves(board: Board, avalibleMoves: string[], tunnels: Record<stri
     for (const lineKey of avalibleMoves) {
         const selectionKey = getSelectionKey(board, lineKey, tunnels);
         if (moveMap[selectionKey] === undefined) {
-            lx("log", "key for move", lineKey, "=", selectionKey, "(new)")
+            lxd("key for move", lineKey, "=", selectionKey, "(new)")
             moveMap[selectionKey] = lineKey;
         }
         else {
-            lx("log", "key for move", lineKey, "=", selectionKey, "(existing)")
+            lxd("key for move", lineKey, "=", selectionKey, "(existing)")
         }
     }
     return Object.values(moveMap);
@@ -216,6 +243,7 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
         // sort evaluated moves into buckets of moves that score points, and moves that don't
         const moveSeq = { points, lineKeys: [lineKey] }
         if (points <= 0 || moves.length === 1) {
+            // either the move got no points, or it's the only avalible move
             completeMoveSeqs[moveKey(moveSeq.lineKeys)] = moveSeq;
         }
         else {
@@ -224,16 +252,15 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
     }
 
     // remaining iterations
-    let limit = 50;
-    while (incompleteMoveSeqs.length > 0 && limit > 0) {
-        limit -= 1;
+    let softLimit = 50;
+    while (incompleteMoveSeqs.length > 0) {
+        softLimit -= 1;
         const furtherIncompleteMoveSeqs = []
         for (const moveSeq of incompleteMoveSeqs) {
             // do move sequence
             for (const lk of moveSeq.lineKeys) {
                 _selectLineOnBoard(board, lk, "p2")
             }
-            logcxt.prefix = `eval partial ai move ${moveSeq.lineKeys.join(" ")}`;
             // only process unselected lines
             const remainingMoves = moves.filter(lk => !moveSeq.lineKeys.includes(lk))
             for (const lk of remainingMoves) {
@@ -258,8 +285,6 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
                     furtherIncompleteMoveSeqs.push(aggregatedMove);
                 }
             }
-            logcxt.prefix = ``;
-
             // revert board back to original state 
             for (const lk of moveSeq.lineKeys) {
                 _unselectLineOnBoard(board, lk)
@@ -268,7 +293,7 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
         incompleteMoveSeqs = furtherIncompleteMoveSeqs;
     }
 
-    if (limit <= 0) {
+    if (softLimit <= 0) {
         lx("error", "getPossibleMoves limit hit!")
     }
 
@@ -277,9 +302,23 @@ function getSimpleBoardEvaluation(board: Board, moves: string[]) {
     return choices;
 }
 
+function simpleEvaluateMoveSeq(board: Board, moveSeq: string[]): number {
+    let total = 0;
+    for (const lineKey of moveSeq) {
+        const res = simpleEvaluateMove(board, lineKey)
+        total += res;
+        _selectLineOnBoard(board, lineKey, "p2")
+    }
+    for (const lineKey of moveSeq) {
+        _unselectLineOnBoard(board, lineKey)
+    }
+    return total;
+}
+
 function simpleEvaluateMove(board: Board, lineKey: string): number {
     const line = board.lines[lineKey];
     const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
+    lx("assert", adjacentCells.length > 0)
     if (adjacentCells.length == 1) {
         // 1: simple case, max one point
         const cellType = getCellType(board, adjacentCells[0])
@@ -295,7 +334,8 @@ function simpleEvaluateMove(board: Board, lineKey: string): number {
         }
     }
     else {
-        // 2: possibly can get multiple points via tunnel
+        // 2: possibly can get multiple points
+        lx("assert", adjacentCells.length === 2)
         const a = getCellType(board, adjacentCells[0])
         const b = getCellType(board, adjacentCells[1])
         if (a === "goal" && b === "goal") {
@@ -410,17 +450,17 @@ function getTunnelLineKeysForCells(board: Board, prevCellPos: CellPos, nextCellP
     console.assert(unselectedLines.length === 2, "unsafe lines should have 2 unselected")
     let nextSharedLines = []
     for (const l of unselectedLines) {
-        // lx("log", `unselected line ${l.lineKey}`)
+        // lxd(`unselected line ${l.lineKey}`)
         const prevCellLines = getLinesForCellPos(board, prevCellPos)
-        // lx("log", `prevCellLines  ${prevCellLines.join(" ")}`)
+        // lxd(`prevCellLines  ${prevCellLines.join(" ")}`)
         if (!prevCellLines.includes(l.lineKey)) {
-            // lx("log", `include  ${l.lineKey}!`)
+            // lxd(`include  ${l.lineKey}!`)
             nextSharedLines.push(l)
         }
     }
     const nextSharedLine = nextSharedLines[0]
 
-    // lx("log", { nextSharedLines, prevCellPos, nextCellPos, sharedLineKey, nextCell, unselectedLines, sharedLineIsSelected })
+    // lxd({ nextSharedLines, prevCellPos, nextCellPos, sharedLineKey, nextCell, unselectedLines, sharedLineIsSelected })
 
     const nextNextCellPos = nextSharedLine.cells
         // filter out self
@@ -488,41 +528,6 @@ function getTunnelLineKeys(board: Board): Record<string, string[]> {
         }
     }
     return tunnels;
-}
-
-function isMoveMakingMostOfTunnels(move: Move, knownTunnels: string[][]) {
-    if (knownTunnels.length === 0) {
-        return true;
-    }
-    const tunnelRuns: Record<string, { tunnel: string[], len: number }> = {};
-    for (let i = 0; i < move.lineKeys.length; i++) {
-        const lk = move.lineKeys[i]
-        if (i >= move.lineKeys.length - 1) {
-            // if lk very last line in the move- this cannot be a part of the run
-            // so we now eval tunnel usage
-            for (const run of Object.values(tunnelRuns)) {
-                const { len, tunnel } = run;
-                if (len !== tunnel.length && len !== tunnel.length - 2) {
-                    // not making the most!
-                    lx("log", "run for tunnel", tunnel[0], "is", `${len}/${tunnel.length}`, "long, discarding move", JSON.stringify(move.lineKeys))
-                    return false;
-                }
-            }
-        }
-        else {
-            const tunnel = knownTunnels.find(t => t.find(tt => tt === lk))
-            if (tunnel) {
-                if (tunnelRuns[tunnel[0]] === undefined) {
-                    // create a new tunnel
-                    tunnelRuns[tunnel[0]] = { tunnel, len: 1 }
-                }
-                else {
-                    tunnelRuns[tunnel[0]].len += 1;
-                }
-            }
-        }
-    }
-    return true;
 }
 
 function getTunnelType(board: Board, lineKeys: string[]) {
@@ -602,11 +607,11 @@ function getSelectionKey(board: Board, lineKey: string, knownTunnels: Record<str
     const isLineTypeUnsafe = (lk: string) => getLineType(board, lk) === "unsafe";
     const isLineOnBoardEdge = (lk: string) => board.lines[lk].cells.length === 1;
     const locationInTunnel = lineKeys.findIndex(lk => lk === lineKey);
-    lx("log", "getSelectionKey:", `stats for ${lineKey}:`, {
-        locationInTunnel,
-        isLineOnBoardEdge: isLineOnBoardEdge(lineKey),
-        isLineTypeUnsafe: isLineTypeUnsafe(lineKey)
-    })
+    // lxd("getSelectionKey:", `stats for ${lineKey}:`, {
+    //     locationInTunnel,
+    //     isLineOnBoardEdge: isLineOnBoardEdge(lineKey),
+    //     isLineTypeUnsafe: isLineTypeUnsafe(lineKey)
+    // })
     if (locationInTunnel === 0 && (isLineOnBoardEdge(lineKey) || !isLineTypeUnsafe(lineKey))) {
         return `${tunnelKey}-start`
     }
@@ -647,7 +652,6 @@ function getTunnelKey(board: Board, startLk: string, endLk: string) {
 
 
 let logcxt = {
-    player: "ai",
     movenum: 0,
     prefix: "",
 }
@@ -659,65 +663,8 @@ function lx(kind: string, ...args: any[]) {
     (console as any)[kind](`mv:${logcxt.movenum}${prefix}`, ...args)
 }
 
-function getMoveList(board: Board, moveList: Move[] | string[], prefix: string) {
-    const moveListAnnotated = moveList.map(move => {
-        let lineKeys0, points;
-        if (typeof move === 'string') {
-            lineKeys0 = [move]
-            points = undefined;
-        }
-        else {
-            lineKeys0 = move.lineKeys;
-            points = move.points;
-        }
-        let s = lineKeys0
-            .map(lk => `${lk} (${getLineType(board, lk)})`)
-            .join("\n");
-        if (points !== undefined) {
-            s += "\npoints: " + points
-        }
-        return s;
-    })
-
-    return moveListAnnotated
+function lxd(...args: any[]) {
+    if(process.env.NODE_ENV === "development") {
+        lx("debug", ...args)
+    }
 }
-
-// algo
-/*
-im gonna have to do lookahead at some point... but for now
-
-board can be evaluated, giving each line a points total.
-Also proably the minimum remaining turns
- 
-if we just seek to minimise the point total for the next turn, that might work well
-
-or maybe
- 
-we look at each line, and the 1-2 adjacent cells next to it
-0-1 adj line is a "free" cell. Safe to place line here wihtout giving point to other player
-2 adjs line is a "unsafe" cell. Placing a line here will give the other player potentail to get a square
-3 adjacent lines is a "goal" cell. You will at least get one point for selecting
-4 adjacent lines is a "claimed" cell
-
-1. if any cell is "goal" the line is "goal"
-2. if any cell is "unsafe", the line is "unsafe"
-3. else the line is free
-("claimed" cells have no avaible lines)
-
-there is a map of line groups -> the amount of points that will be obtained
-on picking one if these groups. The ai should recognise that on picking
-the group all lines in that groups are picked. If the total points > 0, the ai
-should recognise it can choose that line group without ending it's turn.
-
-to calculate this the following algorithim is used:
-if at least one adj cell is a "goal" cell:
-    X:
-    - add a point
-    if the other cell is a "goal" cell
-        - add another point
-    elif the other cell is a "unsafe" cell
-        - add another point
-        if you travel "via the tunnel" to the next cell and it is "unsafe"
-        add the "tunnel" line to
-        GOTO label X
-*/
