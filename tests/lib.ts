@@ -30,7 +30,6 @@ export async function aiTest(page, state, evalBoard, expectedMoveSet) {
                 return; // pass
             }
             const game = await getGameState(page);
-            console.log("asd", game.board.lines)
             expect(game.turn).toBe("p2")
             const chosenLineKey = await evalBoard(game.board);
             await selectLine(page, chosenLineKey);

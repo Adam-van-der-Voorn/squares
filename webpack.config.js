@@ -18,7 +18,11 @@ const base = {
         rules: [
             {
                 test: /\.tsx?$/,
-                use: 'ts-loader',
+                use: [
+                    {
+                        loader: 'ts-loader'
+                    }
+                ],
                 exclude: /node_modules/,
             },
         ]
@@ -26,7 +30,10 @@ const base = {
     resolve: {
         extensions: ['.ts', '.tsx', '.js'],
         roots: ["src"],
-    }
+    },
+    optimization: {
+        // minimize: false
+    },
 }
 
 module.exports = (env, argv) => {

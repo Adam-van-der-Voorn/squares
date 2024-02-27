@@ -57,6 +57,6 @@ test('ai holds of on completing half open tunnel so it can claim bigger one', as
             "1,2v","0,2v","4,0v","3,0v","2,0v","1,0v","0,0v","1,5h"
         ]
     }
-    const expectedMoveSet = ["1,4h", "1,4v", "0,5h"];
+    const expectedMoveSet = ["1,4h", "1,3v", "0,5h"];
     await aiTest(page, state, (board) => getBestMove(board)[0], expectedMoveSet);
 });

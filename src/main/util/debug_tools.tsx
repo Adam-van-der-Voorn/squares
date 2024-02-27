@@ -62,7 +62,6 @@ export function useDebugMoveSeqs(squaresGame: SquaresGame, setSquaresGame: any) 
             setSquaresGame({...squaresGame})
         }
         (window as any)._squares_getGameState = () => {
-            console.log("asdasd", Object.keys(squaresGame.board.lines))
             return squaresGame;
         }
         setMoveListener(squaresGame, "debug-listener", lk => {
