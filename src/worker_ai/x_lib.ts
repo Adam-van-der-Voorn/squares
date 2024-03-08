@@ -60,12 +60,7 @@ function _getBestMove(board: Board): string[] {
         }
 
         // evaluate board state for opponent, get max points they can get
-        const possibleMoves2 = Object.entries(board.lines)
-            .filter(e => !e[1].selected)
-            .map(e => e[0]);
-        shuffle(possibleMoves2, RNG_SEED);
-        const predictedOpponentMoves = getSimpleBoardEvaluation(board, possibleMoves2);
-        // const predictedOpponentMoves = getHeuristicBoardEvaluation(board);
+        const predictedOpponentMoves = getHeuristicBoardEvaluation(board);
         const predictedOpponentMove = predictedOpponentMoves?.[0];
 
         // calc score based on how many points we think opponent will get
@@ -193,7 +188,7 @@ function getHeuristicBoardEvaluation(board: Board) {
  * @return selection as a linekey seq
  */
 function getTunnelSemiSelection(tunnel: GoalTunnel): string[] {
-    lxd("semi select tunnel", tunnel)
+    //lxd("semi select tunnel", tunnel)
     const tunnelLen = tunnel.sortedLineKeys.length;
     const isReadyToEndTurn = tunnel.isFullyClosed
         ? (i: number) => i + 3 >= tunnelLen
@@ -207,11 +202,11 @@ function getTunnelSemiSelection(tunnel: GoalTunnel): string[] {
             // - select i + 1 (getting the optimal amount of points from the tunnel while still ending your turn)
             // currently this knowedge is not used, but in theory via brute force we will come to the same conclusion
             // but it is still on the cards for future optimisations
-            lxd("semi select tunnel end:", i)
+            //lxd("semi select tunnel end:", i)
             return selections;
         }
         else {
-            lxd("semi select tunnel:", i, tunnel.sortedLineKeys[i])
+            //lxd("semi select tunnel:", i, tunnel.sortedLineKeys[i])
             selections.push(tunnel.sortedLineKeys[i])
         }
     }
@@ -223,11 +218,11 @@ function curateMoves(board: Board, avalibleMoves: string[], tunnels: Record<stri
     for (const lineKey of avalibleMoves) {
         const selectionKey = getSelectionKey(board, lineKey, tunnels);
         if (moveMap[selectionKey] === undefined) {
-            lxd("key for move", lineKey, "=", selectionKey, "(new)")
+            //lxd("key for move", lineKey, "=", selectionKey, "(new)")
             moveMap[selectionKey] = lineKey;
         }
         else {
-            lxd("key for move", lineKey, "=", selectionKey, "(existing)")
+            //lxd("key for move", lineKey, "=", selectionKey, "(existing)")
         }
     }
     return Object.values(moveMap);
@@ -521,6 +516,7 @@ function getTunnelLineKeys(board: Board): Record<string, string[]> {
             for (const nextPos of directions) {
                 if (isTunnelEntrance(board, cellPos, nextPos)) {
                     const lineKeys = getTunnelLineKeysForCells(board, cellPos, nextPos);
+                    // lxd("tunnel entrance:", cellPos.x, cellPos.y, "->", nextPos.x, nextPos.y, "\nlineKeys:", JSON.stringify(lineKeys))
                     const key = getTunnelKey(board, lineKeys[0], lineKeys[lineKeys.length - 1]);
                     tunnels[key] = lineKeys;
                 }
