@@ -6,7 +6,8 @@ const base = {
         "main": './src/main/entry.tsx',
         "test": './src/test/entry.tsx',
         "ai.worker.rand": './src/worker_ai/rand.ts',
-        "ai.worker.x": './src/worker_ai/x.ts',
+        "ai.worker.search": './src/worker_ai/search/entry.ts',
+        "ai.worker.quick": './src/worker_ai/quick/entry.ts',
     },
     output: {
         filename: '[name].bundle.js',
