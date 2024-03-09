@@ -1,4 +1,4 @@
-import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, boardDimensions as getBoardDimensions, getCell, getScores } from "../../main/game";
+import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, getScores } from "../../main/game";
 import { shuffle, unpack } from "../../main/util/simple";
 
 const RNG_SEED = 387429827398;

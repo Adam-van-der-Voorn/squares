@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
 import { getPxValue, setTimeoutP, useWindowDimensions } from "../util/simple";
 import { Grid } from "./Grid";
-import { boardDimensions, getScores, selectLine } from "../game";
+import { getBoardDimensions, getScores, selectLine } from "../game";
 import { KeyedMessageEvent, usePromiseWorker } from "../util/promiseWorker";
 import { useDebugColoredOpponentLines, useDebugMoveSeqs } from "../util/debug_tools";
 
@@ -10,7 +10,7 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
     const [style, setStyle] = useState<Record<string, string>>({ width: "100%", height: "fit-content" })
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
-    const { rows, cols } = boardDimensions(squaresGame.board);
+    const { rows, cols } = getBoardDimensions(squaresGame.board);
 
     const workerOpts = useMemo(() => ({ type: "module" }), [])
     const vsAI = aiWorkerUrl !== undefined;

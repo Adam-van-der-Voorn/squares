@@ -110,7 +110,7 @@ export function newGame(numCellsX: number, numCellsY: number): SquaresGame {
     }
 }
 
-export function boardDimensions(board: Board): { rows: number, cols: number } {
+export function getBoardDimensions(board: Board): { rows: number, cols: number } {
     return {
         // rows are inner arrays
         rows: board.cells[0].length,

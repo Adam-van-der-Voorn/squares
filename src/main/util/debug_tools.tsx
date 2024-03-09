@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SquaresGame, boardDimensions, selectLine, setMoveListener } from "../game";
+import { SquaresGame, getBoardDimensions, selectLine, setMoveListener } from "../game";
 
 const DEBUG_COLORED_OPPONENT_LINES = true;
 
@@ -54,7 +54,7 @@ export function useDebugLineLabels() {
 
 // so we can reproduce matches in tests, and vice versa
 export function useDebugMoveSeqs(squaresGame: SquaresGame, setSquaresGame: any) {
-    const { rows, cols } = boardDimensions(squaresGame.board)
+    const { rows, cols } = getBoardDimensions(squaresGame.board)
     let [moveList, setMoveList] = useState<string[]>([])
     useEffect(() => {
         (window as any)._squares_applyMoveSeq = (seq: string[]) => {
