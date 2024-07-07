@@ -7,7 +7,7 @@ const AI_DELAY_MS = 300;
                         
 export function Game({ width, height, vsAI }: any) {
     const [squaresGame, setSquaresGame] = useState<SquaresGame>(newGame(width, height))
-    const aiWorkerUrl = vsAI ? "ai.worker.quick.bundle.js" : undefined;
+    const aiWorkerUrl = vsAI ? "js/ai.worker.quick.bundle.js" : undefined;
     return <GameController squaresGame={squaresGame}
         setSquaresGame={setSquaresGame}
         aiWorkerUrl={aiWorkerUrl}

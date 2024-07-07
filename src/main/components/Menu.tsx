@@ -46,7 +46,7 @@ export function Menu({ onStart }: Props) {
         isSubmitAllowed = true;
     }
 
-    const cat = "cat.jpeg"
+    const cat = "img/cat.jpeg"
 
     return <div className="menu-container">
         <button className="menu-card menu-button-a" disabled={isSubmitAllowed === false} onClick={() => handleSumbit({ withAI: true })}>

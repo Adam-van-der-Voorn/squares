@@ -118,7 +118,7 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
 
     const gridIsEnabled = !vsAI || squaresGame.turn === "p1";
 
-    const cat = "cat.jpeg"
+    const cat = "img/cat.jpeg"
 
     return <div className="card" style={style} ref={ref}>
         <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} enabled={gridIsEnabled} rows={rows} cols={cols} />

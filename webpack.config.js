@@ -11,7 +11,7 @@ const base = {
     },
     output: {
         filename: '[name].bundle.js',
-        path: path.resolve(__dirname, 'static'),
+        path: path.resolve(__dirname, 'static', 'js'),
         // needed as default hash fn has now been deemed insecure
         hashFunction: 'xxhash64',
     },
