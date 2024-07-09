@@ -118,6 +118,8 @@ function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semi
 
     // we initlaise the points gained as the len of the semi-select candidate minus four,
     // as four points are taken off for the two cells we do not select and therefore give to the opponent
+    // TODO we need to function similar (same?) as getPointGainForSemiSelctionOfOpenTunnel
+    // to also handle the donut case for this
     let pointsGainedFromSemiSelectingAll = semiSelectableTunnel.lineKeys.length - 4;
     console.log(logPrefix, "inital pointsGainedFromSemiSelecting =", pointsGainedFromSemiSelectingAll)
 
@@ -157,6 +159,7 @@ function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semi
  * assumeing the opponent finishes the selection (which they have no reason not to)
  */
 function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunnel) {
+    const logTag = "getPointGainForSemiSelctionOfOpenTunnel:"
     if (openTunnel.isEndClosed || openTunnel.isStartClosed) {
         throw "only works with open tunnels"
     }
@@ -165,14 +168,16 @@ function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunne
     const second = openTunnel.lineKeys.at(1);
     const secondFromEnd = openTunnel.lineKeys.at(openTunnel.lineKeys.length - 2);
     if (second === undefined || secondFromEnd === undefined) {
-        console.error("getPointDiff:", "TODO not sure this is works for tunnels of len 1 tbh")
+        console.error(logTag, "TODO not sure this is works for tunnels of len 1 tbh")
         return -2
     }
     const end = openTunnel.lineKeys[openTunnel.lineKeys.length - 1]
     if (end === second) {
-        console.error("getPointDiff:", "TODO not sure this is works for tunnels of len 2 tbh")
+        console.error(logTag, "TODO not sure this is works for tunnels of len 2 tbh")
         return -2
     }
+    console.log(logTag, { start, end, second, secondFromEnd})
+    
     const entryCell = board.lines[start].cells
         .find(cpos => {
             const cellLines = getCell(board, cpos)!.lines
@@ -189,7 +194,7 @@ function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunne
             return cellLines.includes(secondFromEnd)
         })
 
-    if (!entryCell || !lastCell) {
+    if (entryCell === undefined || lastCell === undefined) {
         throw "cells should exist"
     }
 
