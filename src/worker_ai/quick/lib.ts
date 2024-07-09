@@ -1,12 +1,7 @@
-import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, lineKey } from "../../main/game";
-import { shuffle } from "../../main/util/simple";
+import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, getScores, lineKey } from "../../main/game";
+import { shuffle, unpack } from "../../main/util/simple";
 
 const RNG_SEED = 4398798765;
-
-type Move = {
-    points: number,
-    lineKeys: string[]
-}
 
 type Tunnel = {
     lineKeys: string[]
@@ -15,10 +10,9 @@ type Tunnel = {
 }
 
 type GoalTunnel = {
-    sortedLineKeys: string[]
+    lineKeys: string[]
     isFullyClosed: boolean
 }
-
 
 export function getBestMove(board: Board): string[] {
     // algo:
@@ -36,71 +30,195 @@ export function getBestMove(board: Board): string[] {
     //// but if X < opponent score, we will def lose
     //// so only semi select if X > opponent score
 
-    const allTunnels = getTunnelLineKeys(board);
+    const anyUnselectedLine = Object.values(board.lines)
+        .find(l => l.selected === false)
+    if (!anyUnselectedLine) {
+        console.log("no lines to select")
+        return []
+    }
+
+    const allTunnelLKs = getTunnelMap(board);
+    const allTunnels = classifyTunnels(board, Object.values(allTunnelLKs))
 
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
     shuffle(allPotentialMoves, RNG_SEED);
 
-    const goalTunnels = getGoalTunnels(board, Object.values(allTunnels))
+    console.log("all tunnels", allTunnels)
+
+    const goalTunnels = filterForGoalTunnels(allTunnels);
+    const openTunnels = filterForOpenTunnels(allTunnels);
+
     const freeLines = allPotentialMoves.filter(lk => getLineType(board, lk) === "free")
 
     if (freeLines.length > 0) {
         const moves: string[] = []
         for (const goalTunnel of goalTunnels) {
-            moves.push(...goalTunnel.sortedLineKeys)
+            moves.push(...goalTunnel.lineKeys)
         }
         moves.push(freeLines[0])
         console.log(`placing ${JSON.stringify(moves)} as there at at least one free line`)
         return moves;
     }
     else if (goalTunnels.length === 0) {
-        const sortedTunnels = Object.values(allTunnels);
-        sortedTunnels.sort((a, b) => a.length - b.length)
-        console.assert(sortedTunnels.length > 0, "if there is no free lines there should be tunnels")
-        const shortestTunnel = sortedTunnels[0]
-        const middleOfTunnel = Math.floor(shortestTunnel.length / 2)
-        console.log(`no free lines or goal tunnels, placing  at middle of shortest tunnel ${shortestTunnel[middleOfTunnel]}`)
-        return [shortestTunnel[middleOfTunnel]]
+        console.assert(openTunnels.length > 0, "if there is no free lines there should be tunnels")
+        const tunnelsSortedByLength = Object.values(openTunnels);
+        tunnelsSortedByLength.sort((a, b) => a.lineKeys.length - b.lineKeys.length)
+        const shortestTunnel = tunnelsSortedByLength[0]
+        const middleOfTunnel = Math.floor(shortestTunnel.lineKeys.length / 2)
+        console.log(`no free lines or goal tunnels, placing  at middle of shortest tunnel ${shortestTunnel.lineKeys[middleOfTunnel]}`)
+        return [shortestTunnel.lineKeys[middleOfTunnel]]
     }
     else {
         // at least one goal tunnel, but no free lines
-        // we want to fully select all goal tunnels except the largest one,
-        // (for now)
-
-        const semiSelectableTunnelIdx = findTunnelWichCanBeSemiSelected(goalTunnels)
-        let semiSelectableTunnel: GoalTunnel | null = null;
-        if (semiSelectableTunnelIdx !== -1) {
-            // !! remove from goalTunnels
-            semiSelectableTunnel = goalTunnels.splice(semiSelectableTunnelIdx, 1)[0]
-        }
-
+        const semiSelectableTunnelIdx = findTunnelWhichCanBeSemiSelected(goalTunnels)
         const moves: string[] = []
-        for (const goalTunnel of goalTunnels) {
-            moves.push(...goalTunnel.sortedLineKeys)
+        console.log(`at least one goal tunnel, but no free lines.`)
+        if (semiSelectableTunnelIdx === -1) {
+            console.log(`no avalible tunnels to semi-select`)
+            for (const goalTunnel of goalTunnels) {
+                moves.push(...goalTunnel.lineKeys)
+            }
         }
-        console.log(`at least one goal tunnel, but no free lines. Placing ${JSON.stringify(moves)}`)
-        if (semiSelectableTunnel !== null) {
-            const semi = getTunnelSemiSelection(semiSelectableTunnel)
-            console.log(`also semi-select: Placing ${JSON.stringify(semi)}`)
-            moves.push(...semi)
+        else {
+            const semiSelectableTunnel = goalTunnels[semiSelectableTunnelIdx]
+            const semiSelection = getTunnelSemiSelection(semiSelectableTunnel)
+            const scores = getScores(board)
+            const sss = shouldSemiSelect(board, scores, semiSelectableTunnel, openTunnels);
+            console.log(`semi-selection avalible: ${JSON.stringify(semiSelection)}`)
+            const movelist = [...goalTunnels].map(t => t.lineKeys);
+            if (sss) {
+                // remove the tunnel to semi-select and put it on the end
+                movelist.splice(semiSelectableTunnelIdx, 1)
+                movelist.push(semiSelection);
+            }
+            console.log("movelist", movelist)
+            for (const lks of movelist) {
+                moves.push(...lks)
+            }
         }
+        console.log(`Placing ${JSON.stringify(moves)}`)
         return moves
     }
 }
 
-function findTunnelWichCanBeSemiSelected(goalTunnels: GoalTunnel[]) {
+function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semiSelectableTunnel: GoalTunnel, openTunnels: Tunnel[]): boolean {
+    const logPrefix = "shouldSemiSelect:";
+    // we need to decide in between fully selecting and semi selecting the last goal tunnel
+    // as there are no free lines, when we semi select the goal tunnel the opponent will be forced
+    // to close the next open tunnel, leaving us with the same decision
+    // so we can calc the final score if we always semi-select to see if we win or not
+
+    // TODO we need to handle open tunnels of size 1-2 differently, as they cannot be semi-selected.
+
+    if (openTunnels.length === 0) {
+        return false;
+    }
+
+    // we initlaise the points gained as the len of the semi-select candidate minus four,
+    // as four points are taken off for the two cells we do not select and therefore give to the opponent
+    let pointsGainedFromSemiSelectingAll = semiSelectableTunnel.lineKeys.length - 4;
+    console.log(logPrefix, "inital pointsGainedFromSemiSelecting =", pointsGainedFromSemiSelectingAll)
+
+    const allOpenTunnelsExceptFinal = openTunnels.slice(0, openTunnels.length - 1);
+    for (const tunnel of allOpenTunnelsExceptFinal) {
+        const pointDiff = getPointGainForSemiSelctionOfOpenTunnel(board, tunnel)
+        pointsGainedFromSemiSelectingAll += pointDiff;
+        console.log(logPrefix, "pointDiff for", tunnel.lineKeys, "=", pointDiff)
+    }
+    const finalOpenTunnel = openTunnels[openTunnels.length - 1]
+    const finalOpenTunnelPointDiff = finalOpenTunnel.lineKeys.length - 1;
+    pointsGainedFromSemiSelectingAll += finalOpenTunnelPointDiff;
+    console.log(logPrefix, "pointDiff for final tunnel", finalOpenTunnel.lineKeys, "=", finalOpenTunnelPointDiff)
+    
+    const finalScore = scores.p2 + pointsGainedFromSemiSelectingAll;
+    console.log(logPrefix, "finalScore =", finalScore, "(scores.p2 + pointsGainedFromSemiSelectingAll), (", scores.p2, "+", pointsGainedFromSemiSelectingAll, ")")
+    console.log(logPrefix, "scores.p1 =", scores.p1, "will only semi-select if final score is greater than this")
+
+    if (finalScore > scores.p1) {
+        // we can guarentee a W if we semi-select all open tunnels
+        return true;
+    }
+    else if (finalScore === scores.p1) {
+        // we can guarentee a tie if we semi-select all open tunnels
+        // not sure if worth or not tbh
+        // TODO ???
+        return false
+    }
+    else {
+        // we can guarentee a L if we semi-select all open tunnels
+        return false
+    }
+}
+
+/**
+ * get the relative gain in points if the passed in tunnel is semi-selected by the player,
+ * assumeing the opponent finishes the selection (which they have no reason not to)
+ */
+function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunnel) {
+    if (openTunnel.isEndClosed || openTunnel.isStartClosed) {
+        throw "only works with open tunnels"
+    }
+
+    const start = openTunnel.lineKeys[0];
+    const second = openTunnel.lineKeys.at(1);
+    const secondFromEnd = openTunnel.lineKeys.at(openTunnel.lineKeys.length - 2);
+    if (second === undefined || secondFromEnd === undefined) {
+        console.error("getPointDiff:", "TODO not sure this is works for tunnels of len 1 tbh")
+        return -2
+    }
+    const end = openTunnel.lineKeys[openTunnel.lineKeys.length - 1]
+    if (end === second) {
+        console.error("getPointDiff:", "TODO not sure this is works for tunnels of len 2 tbh")
+        return -2
+    }
+    const entryCell = board.lines[start].cells
+        .find(cpos => {
+            const cellLines = getCell(board, cpos)!.lines
+            // the "entry cell" is the non-tunnel cell at the tunnel entrance, 
+            // it will not include the second line in the tunnel
+            return !cellLines.includes(second)
+        })
+
+    const lastCell = board.lines[end].cells
+        .find(cpos => {
+            const cellLines = getCell(board, cpos)!.lines
+            // the "last cell" is the cell at the end of the tunnel
+            // it will include the second to last line in the tunnel
+            return cellLines.includes(secondFromEnd)
+        })
+
+    if (!entryCell || !lastCell) {
+        throw "cells should exist"
+    }
+
+    if (entryCell === lastCell) {
+        // open tunnel is a donut, which means when opponent selects a line it will become fully closed
+        // points is num linekeys in tunnel minus eight becasue four points are taken off for the
+        // four cells we do not select and therefore give to the opponent
+        return openTunnel.lineKeys.length - 8
+    }
+    else {
+        // open tunnel is not a donut, which means when opponent selects a line it will become 1-2 half closed tunnels
+        // points is num linekeys in tunnel minus four becasue four points are taken off for the
+        // two cells we do not select and therefore give to the opponent
+        return openTunnel.lineKeys.length - 4
+    }
+}
+
+function findTunnelWhichCanBeSemiSelected(goalTunnels: GoalTunnel[]) {
     // a closed goal tunnel with < 3 lines cannot be semi selected 
     // An open goal tunnel with < 2 lines cannot be semi selected 
     return goalTunnels
         .findIndex(tunnel => {
-            const tunnelLen = tunnel.sortedLineKeys.length;
+            const tunnelLen = tunnel.lineKeys.length;
             return tunnelLen >= 3 || (!tunnel.isFullyClosed && tunnelLen == 2)
         })
 }
 
-function getGoalTunnels(board: Board, tunnels: string[][]): GoalTunnel[] {
+
+function classifyTunnels(board: Board, tunnels: string[][]): Tunnel[] {
     return Object.values(tunnels)
         .map(tunnelLKs => {
             return {
@@ -108,14 +226,22 @@ function getGoalTunnels(board: Board, tunnels: string[][]): GoalTunnel[] {
                 ...getTunnelType(board, tunnelLKs)
             }
         })
+}
+
+function filterForOpenTunnels(tunnels: Tunnel[]): Tunnel[] {
+    return tunnels.filter(tunnel => !tunnel.isEndClosed && !tunnel.isStartClosed)
+}
+
+function filterForGoalTunnels(tunnels: Tunnel[]): GoalTunnel[] {
+    return tunnels
         .filter(tunnel => tunnel.isEndClosed || tunnel.isStartClosed)
         .map(tunnel => {
-            // we want to the tunnel to start at it's closed end
-            let sortedLineKeys = tunnel.lineKeys;
+            // we want the tunnel to start at it's closed end
+            let arrangedLineKeys = tunnel.lineKeys;
             if (!tunnel.isStartClosed) {
-                sortedLineKeys = [...tunnel.lineKeys].reverse();
+                arrangedLineKeys = [...tunnel.lineKeys].reverse();
             }
-            return { sortedLineKeys, isFullyClosed: tunnel.isEndClosed && tunnel.isStartClosed }
+            return { lineKeys: arrangedLineKeys, isFullyClosed: tunnel.isEndClosed && tunnel.isStartClosed }
         })
 }
 
@@ -125,7 +251,7 @@ function getGoalTunnels(board: Board, tunnels: string[][]): GoalTunnel[] {
  */
 function getTunnelSemiSelection(tunnel: GoalTunnel): string[] {
     //lxd("semi select tunnel", tunnel)
-    const tunnelLen = tunnel.sortedLineKeys.length;
+    const tunnelLen = tunnel.lineKeys.length;
     const isReadyToEndTurn = tunnel.isFullyClosed
         ? (i: number) => i + 3 >= tunnelLen
         : (i: number) => i + 2 >= tunnelLen
@@ -133,83 +259,14 @@ function getTunnelSemiSelection(tunnel: GoalTunnel): string[] {
     const selections = []
     for (let i = 0; i < tunnelLen; i++) {
         if (isReadyToEndTurn(i)) {
-            selections.push(tunnel.sortedLineKeys[i + 1]);
+            selections.push(tunnel.lineKeys[i + 1]);
             return selections;
         }
         else {
-            selections.push(tunnel.sortedLineKeys[i])
+            selections.push(tunnel.lineKeys[i])
         }
     }
     return selections;
-}
-
-function simpleEvaluateMoveSeq(board: Board, moveSeq: string[]): number {
-    let total = 0;
-    for (const lineKey of moveSeq) {
-        const res = simpleEvaluateMove(board, lineKey)
-        total += res;
-        _selectLineOnBoard(board, lineKey, "p2")
-    }
-    for (const lineKey of moveSeq) {
-        _unselectLineOnBoard(board, lineKey)
-    }
-    return total;
-}
-
-function simpleEvaluateMove(board: Board, lineKey: string): number {
-    const line = board.lines[lineKey];
-    const adjacentCells = line.cells.map(c => board.cells[c.y][c.x])
-    console.assert(adjacentCells.length > 0)
-    if (adjacentCells.length == 1) {
-        // 1: simple case, max one point
-        const cellType = getCellType(board, adjacentCells[0])
-        if (cellType === "free" || cellType === "unsafe") {
-            return 0;
-        }
-        else if (cellType == "goal") {
-            return 1;
-        }
-        else {
-            console.error("celltype should not be 'claimed' here. (line is unclaimed, only 1 adj cell)")
-            return -9999;
-        }
-    }
-    else {
-        // 2: possibly can get multiple points
-        console.assert(adjacentCells.length === 2)
-        const a = getCellType(board, adjacentCells[0])
-        const b = getCellType(board, adjacentCells[1])
-        if (a === "goal" && b === "goal") {
-            // both goal cells
-            return 2;
-        }
-        else if (a === "goal" || b === "goal") {
-            // at least one goal cell
-            return 1;
-        }
-        else {
-            // no goals
-            return 0;
-        }
-    }
-}
-
-function getLinesForCellPos(board: Board, cellPos: CellPos): string[] {
-    const cell = getCell(board, cellPos);
-    if (cell !== undefined) {
-        return cell.lines;
-    }
-    const n = { x: cellPos.x, y: cellPos.y - 1 }
-    const e = { x: cellPos.x + 1, y: cellPos.y }
-    const s = { x: cellPos.x, y: cellPos.y + 1 }
-    const w = { x: cellPos.x - 1, y: cellPos.y }
-    for (const adjCellPos of [n, s, e, w]) {
-        const lineKey = getSharedLine(board, cellPos, adjCellPos)
-        if (lineKey !== null) {
-            return [lineKey];
-        }
-    }
-    return [];
 }
 
 function getSharedLine(board: Board, cellPosA: CellPos, cellPosB: CellPos): string | null {
@@ -266,107 +323,126 @@ function getSharedLine(board: Board, cellPosA: CellPos, cellPosB: CellPos): stri
 /**
  * get all the linekeys in a tunnel, starting from the line inbetween prevcellpos and nextcellpos
 */
-function getTunnelLineKeysForCells(board: Board, prevCellPos: CellPos, nextCellPos: CellPos): string[] {
-    const nextCell = getCell(board, nextCellPos);
-
-    const sharedLineKey = getSharedLine(board, prevCellPos, nextCellPos);
-    if (!sharedLineKey) {
-        throw "cells must be adjacent"
-    }
-    const sharedLineIsSelected = board.lines[sharedLineKey].selected;
-    if (sharedLineIsSelected) {
-        throw "shared line must be unselected"
-    }
-
-    if (nextCell === undefined || getCellType(board, nextCell) !== "unsafe") {
-        return [sharedLineKey]
-    }
-
-    const unselectedLines = nextCell.lines
-        .map(lk => {
-            const { selected, cells } = board.lines[lk]
-            return { lineKey: lk, selected, cells }
-        })
-        .filter(l => !l.selected)
-    console.assert(unselectedLines.length === 2, "unsafe lines should have 2 unselected")
-    let nextSharedLines = []
-    for (const l of unselectedLines) {
-        // lxd(`unselected line ${l.lineKey}`)
-        const prevCellLines = getLinesForCellPos(board, prevCellPos)
-        // lxd(`prevCellLines  ${prevCellLines.join(" ")}`)
-        if (!prevCellLines.includes(l.lineKey)) {
-            // lxd(`include  ${l.lineKey}!`)
-            nextSharedLines.push(l)
+function getTunnelLineKeysForCells(board: Board, originCellPos: CellPos, otherCellPos: CellPos): { tunnel: string[], visitedCells: CellPos[] } {
+    const visitedCells: CellPos[] = [];
+    const tunnel: string[] = [];
+    let currentCellPos = originCellPos;
+    let nextCellPos = otherCellPos;
+    
+    while (true) {
+        const logPrefix = `[${currentCellPos.x},${currentCellPos.y} -> ${nextCellPos.x},${nextCellPos.y}]`
+        const currentCell = getCell(board, currentCellPos)
+        if (!currentCell) {
+            throw "invalid origin cell pos"
         }
+        const nextCell = getCell(board, nextCellPos);
+        
+        let sharedLine: string = getSharedLine(board, currentCellPos, nextCellPos)!;
+        if (!sharedLine) {
+            throw "inital cells must be adjacent"
+        }
+
+        const sharedLineIsSelected = board.lines[sharedLine].selected;
+        console.log(logPrefix, "1", { nextCell, cellType: nextCell !== undefined ? getCellType(board, nextCell) : undefined, sharedLine, sharedLineIsSelected})
+        if (sharedLineIsSelected) {
+            // cells are not part of a tunnel together
+            return { tunnel, visitedCells }
+        }
+
+        // now we know an unselected shared line exists between current and next cell
+        tunnel.push(sharedLine)
+        visitedCells.push(currentCellPos)
+
+        if (nextCell === undefined || getCellType(board, nextCell) !== "unsafe") {
+            // next cell is the entrace/exit of the tunnel
+            // loops do not have an entrance/exit
+            return { tunnel, visitedCells }
+        }
+
+        // get the next shared line, i.e
+        // the unselected line on the next cell that is not on the current cell
+        const nextSharedLine = nextCell.lines
+            .filter(lk => !board.lines[lk].selected)
+            .filter(lk => !currentCell.lines.includes(lk))
+            .at(0)
+
+        if (nextSharedLine === undefined) {
+            throw "shared line must exist"
+        }
+
+        const nextNextCellPos = board.lines[nextSharedLine].cells
+            // filter out self
+            .filter(p => p.x !== nextCellPos.x || p.y !== nextCellPos.y)
+            .at(0)
+
+        console.log(logPrefix, "2", { nextSharedLine, nextNextCellPos })
+
+        if (!nextNextCellPos || (nextNextCellPos.x == originCellPos.x && nextNextCellPos.y === originCellPos.y)) {
+            // either the next pos is off the board,
+            // or the tunnel is 'donut' shaped
+            // add the final line and exit
+            tunnel.push(nextSharedLine)
+            visitedCells.push(nextCellPos)
+            return { tunnel, visitedCells };
+        }
+
+        currentCellPos = nextCellPos;
+        nextCellPos = nextNextCellPos;
     }
-    const nextSharedLine = nextSharedLines[0]
-
-    // lxd({ nextSharedLines, prevCellPos, nextCellPos, sharedLineKey, nextCell, unselectedLines, sharedLineIsSelected })
-
-    const nextNextCellPos = nextSharedLine.cells
-        // filter out self
-        .filter(p => p.x !== nextCellPos.x || p.y !== nextCellPos.y)
-    [0]
-
-    if (nextNextCellPos === undefined) {
-        // next next cell is off the board
-        return [sharedLineKey, nextSharedLine.lineKey]
-    }
-
-    return [sharedLineKey, ...getTunnelLineKeysForCells(board, nextCellPos, nextNextCellPos)]
 }
 
-/**
- * 
- */
-function isTunnelEntrance(board: Board, startingCellPos: CellPos, nextCellPos: CellPos): boolean {
-    const nextCell = getCell(board, nextCellPos)
-    if (nextCell !== undefined && getCellType(board, nextCell) === "unsafe") {
-        const sharedLineKey = getSharedLine(board, startingCellPos, nextCellPos);
-        if (!sharedLineKey) {
-            return false;
-        }
-        const sharedLine = board.lines[sharedLineKey];
-        if (!sharedLine.selected) {
-            return true;
-        }
-    }
-    return false;
-}
 
 /**
  * get all "tunnels".
  * what is a tunnel? A sequence of lineKeys that represent all the "joining"
- * lines of a adjaecent sequence of unsafe cells. This includes the end lines.
+ * lines of a adjacent sequence of unsafe cells. This includes the end lines.
  * @return 
  */
-function getTunnelLineKeys(board: Board): Record<string, string[]> {
-    const { cols, rows } = getBoardDimensions(board);
-    const tunnels: Record<string, string[]> = {}
-    for (let y = -1; y < rows + 1; y++) {
-        for (let x = -1; x < cols + 1; x++) {
-            const cellPos = { x, y }
-            const cell = getCell(board, cellPos);
-            const cellType = cell !== undefined
-                ? getCellType(board, cell)
-                : null;
-            if (cellType === "unsafe") {
-                // cell is part of a tunnel
-                continue;
+function getTunnelMap(board: Board): Record<string, string[]> {
+    const tunnels: Record<string, string[]> = {};
+    const avalibleCells = unpack(board.cells);
+    console.log("avaliblecells", avalibleCells)
+    while (avalibleCells.length > 0) {
+        const { x, y, val } = avalibleCells.pop()!
+        const cellType = getCellType(board, val);
+        if (cellType !== "goal" && cellType !== "unsafe") {
+            // only goal and unsafe cells need to be scanned to find all tunnels
+            continue
+        }
+        const nPos = { x, y: y - 1 };
+        const ePos = { x: x + 1, y: y }
+        const sPos = { x: x, y: y + 1 }
+        const wPos = { x: x - 1, y: y }
+        const directions = [nPos, ePos, sPos, wPos];
+        const tunnel = []
+        console.log("\n\nenter get tunnel for ", {x, y})
+        for (const nextPos of directions) {
+            const { tunnel: lineKeys, visitedCells } = getTunnelLineKeysForCells(board, { x, y }, nextPos);
+            console.log("for pos:", nextPos, "tunnel:", lineKeys, "visited: ", visitedCells)
+            if (lineKeys.length > 0 && tunnel.length === 0) {
+                // reverse first valid result so that final tunnel is in order
+                //  e.g.
+                //  for tunnel [line1, cell1, l2, c2, l3, c3, l4, c4, l5] where our inital cell is c3
+                //  getTunnelLineKeysForCells(c3, c2) will return [l3, l2, l1]
+                //  getTunnelLineKeysForCells(c3, c4) will return [l4, l5]
+                //  to get the correct order of lines for the tunnel we need to reverse the first result
+                console.log("(reversed)")
+                lineKeys.reverse()
             }
-            const nPos = { x, y: y - 1 };
-            const ePos = { x: x + 1, y: y }
-            const sPos = { x: x, y: y + 1 }
-            const wPos = { x: x - 1, y: y }
-            const directions = [nPos, ePos, sPos, wPos];
-            for (const nextPos of directions) {
-                if (isTunnelEntrance(board, cellPos, nextPos)) {
-                    const lineKeys = getTunnelLineKeysForCells(board, cellPos, nextPos);
-                    // lxd("tunnel entrance:", cellPos.x, cellPos.y, "->", nextPos.x, nextPos.y, "\nlineKeys:", JSON.stringify(lineKeys))
-                    const key = getTunnelKey(board, lineKeys[0], lineKeys[lineKeys.length - 1]);
-                    tunnels[key] = lineKeys;
+            for (const c of visitedCells) {
+                // remove cells from avalibility list
+                const r = avalibleCells.findIndex((ac) => ac.x === c.x && ac.y === c.y)
+                if (r !== -1) {
+                    console.log("remove avalible cell at indx", r, "(", avalibleCells[r].x, ",", avalibleCells[r].y, ")");
+                    avalibleCells.splice(r, 1);
                 }
             }
+            tunnel.push(...lineKeys);
+        }
+        console.log("avalibleCells", JSON.stringify(avalibleCells))
+        if (tunnel.length > 0) {
+            const key = getTunnelKey(board, tunnel[0], tunnel[tunnel.length - 1]);
+            tunnels[key] = tunnel;
         }
     }
     return tunnels;
