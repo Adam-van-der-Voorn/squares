@@ -1,6 +1,6 @@
 import { getBestMove } from '../src/worker_ai/quick/lib';
 import { test } from '@playwright/test';
-import { checkAiMoveSet } from './lib';
+import { checkAiMoveSet } from './test_lib';
 
 test('simple, small scale choice', async ({ page }) => {
     const state = {

@@ -1,11 +1,11 @@
 import { Board, SquaresGame } from '../src/main/game';
 import { expect } from '@playwright/test';
 
-export function selectLine(page: any, lineKey: string): Promise<unknown> {
-    return bulkSelectLines(page, [lineKey])
+export function applyMove(page: any, lineKey: string): Promise<unknown> {
+    return applyMoveSeq(page, [lineKey])
 }
 
-export function bulkSelectLines(page: any, lineKeys: string[]): Promise<unknown> {
+export function applyMoveSeq(page: any, lineKeys: string[]): Promise<unknown> {
     return page.evaluate(([lineKeys]) => {
         return (window as any)._squares_applyMoveSeq(lineKeys);
     }, [lineKeys])
@@ -21,7 +21,7 @@ export async function checkAiMoveSet(page, state, evalBoard: (board: Board) => s
     try {
         // load page and initial state
         await page.goto(`/test.html?width=${state.cols}&height=${state.rows}`);
-        await bulkSelectLines(page, state.moves)
+        await applyMoveSeq(page, state.moves)
 
         // game loop
         let actualMoves = [];
@@ -37,7 +37,7 @@ export async function checkAiMoveSet(page, state, evalBoard: (board: Board) => s
                 throw "ai unable to find further move. actuall move set = " + s;
             }
             for (const lk of chosenLineKeys) {
-                await selectLine(page, lk);
+                await applyMove(page, lk);
                 actualMoves.push(lk);
                 expect(expectedMoveSet).toContain(lk);
             }
@@ -50,11 +50,6 @@ export async function checkAiMoveSet(page, state, evalBoard: (board: Board) => s
         throw e;
     }
 }
-
-
-
-
-
 
 // not working
 function diffMoveSets(expected: string[], actual: string[]): string {

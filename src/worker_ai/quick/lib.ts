@@ -38,14 +38,13 @@ export function getBestMove(board: Board): string[] {
     }
 
     const allTunnelLKs = getTunnelMap(board);
+    console.log("tunnel map\n", allTunnelLKs)
     const allTunnels = classifyTunnels(board, Object.values(allTunnelLKs))
 
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
     shuffle(allPotentialMoves, RNG_SEED);
-
-    console.log("all tunnels", allTunnels)
 
     const goalTunnels = filterForGoalTunnels(allTunnels);
     const openTunnels = filterForOpenTunnels(allTunnels);
@@ -101,6 +100,62 @@ export function getBestMove(board: Board): string[] {
         console.log(`Placing ${JSON.stringify(moves)}`)
         return moves
     }
+}
+
+/**
+ * get all "tunnels".
+ * what is a tunnel? A sequence of lineKeys that represent all the "joining"
+ * lines of a adjacent sequence of unsafe cells. This includes the end lines.
+ * @return 
+ */
+export function getTunnelMap(board: Board): Record<string, string[]> {
+    const tunnels: Record<string, string[]> = {};
+    const avalibleCells = unpack(board.cells);
+    console.log("avaliblecells", avalibleCells)
+    while (avalibleCells.length > 0) {
+        const { x, y, val } = avalibleCells.pop()!
+        const cellType = getCellType(board, val);
+        if (cellType !== "goal" && cellType !== "unsafe") {
+            // only goal and unsafe cells need to be scanned to find all tunnels
+            continue
+        }
+        const nPos = { x, y: y - 1 };
+        const ePos = { x: x + 1, y: y }
+        const sPos = { x: x, y: y + 1 }
+        const wPos = { x: x - 1, y: y }
+        const directions = [nPos, ePos, sPos, wPos];
+        const tunnel = []
+        console.log("\n\nenter get tunnel for ", {x, y})
+        for (const nextPos of directions) {
+            const { tunnel: lineKeys, visitedCells } = getTunnelLineKeysForCells(board, { x, y }, nextPos);
+            console.log("for pos:", nextPos, "tunnel:", lineKeys, "visited: ", visitedCells)
+            if (lineKeys.length > 0 && tunnel.length === 0) {
+                // reverse first valid result so that final tunnel is in order
+                //  e.g.
+                //  for tunnel [line1, cell1, l2, c2, l3, c3, l4, c4, l5] where our inital cell is c3
+                //  getTunnelLineKeysForCells(c3, c2) will return [l3, l2, l1]
+                //  getTunnelLineKeysForCells(c3, c4) will return [l4, l5]
+                //  to get the correct order of lines for the tunnel we need to reverse the first result
+                console.log("(reversed)")
+                lineKeys.reverse()
+            }
+            for (const c of visitedCells) {
+                // remove cells from avalibility list
+                const r = avalibleCells.findIndex((ac) => ac.x === c.x && ac.y === c.y)
+                if (r !== -1) {
+                    console.log("remove avalible cell at indx", r, "(", avalibleCells[r].x, ",", avalibleCells[r].y, ")");
+                    avalibleCells.splice(r, 1);
+                }
+            }
+            tunnel.push(...lineKeys);
+        }
+        console.log("avalibleCells", JSON.stringify(avalibleCells))
+        if (tunnel.length > 0) {
+            const key = getTunnelKey(board, tunnel[0], tunnel[tunnel.length - 1]);
+            tunnels[key] = tunnel;
+        }
+    }
+    return tunnels;
 }
 
 function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semiSelectableTunnel: GoalTunnel, openTunnels: Tunnel[]): boolean {
@@ -177,7 +232,7 @@ function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunne
         return -2
     }
     console.log(logTag, { start, end, second, secondFromEnd})
-    
+
     const entryCell = board.lines[start].cells
         .find(cpos => {
             const cellLines = getCell(board, cpos)!.lines
@@ -394,63 +449,6 @@ function getTunnelLineKeysForCells(board: Board, originCellPos: CellPos, otherCe
         currentCellPos = nextCellPos;
         nextCellPos = nextNextCellPos;
     }
-}
-
-
-/**
- * get all "tunnels".
- * what is a tunnel? A sequence of lineKeys that represent all the "joining"
- * lines of a adjacent sequence of unsafe cells. This includes the end lines.
- * @return 
- */
-function getTunnelMap(board: Board): Record<string, string[]> {
-    const tunnels: Record<string, string[]> = {};
-    const avalibleCells = unpack(board.cells);
-    console.log("avaliblecells", avalibleCells)
-    while (avalibleCells.length > 0) {
-        const { x, y, val } = avalibleCells.pop()!
-        const cellType = getCellType(board, val);
-        if (cellType !== "goal" && cellType !== "unsafe") {
-            // only goal and unsafe cells need to be scanned to find all tunnels
-            continue
-        }
-        const nPos = { x, y: y - 1 };
-        const ePos = { x: x + 1, y: y }
-        const sPos = { x: x, y: y + 1 }
-        const wPos = { x: x - 1, y: y }
-        const directions = [nPos, ePos, sPos, wPos];
-        const tunnel = []
-        console.log("\n\nenter get tunnel for ", {x, y})
-        for (const nextPos of directions) {
-            const { tunnel: lineKeys, visitedCells } = getTunnelLineKeysForCells(board, { x, y }, nextPos);
-            console.log("for pos:", nextPos, "tunnel:", lineKeys, "visited: ", visitedCells)
-            if (lineKeys.length > 0 && tunnel.length === 0) {
-                // reverse first valid result so that final tunnel is in order
-                //  e.g.
-                //  for tunnel [line1, cell1, l2, c2, l3, c3, l4, c4, l5] where our inital cell is c3
-                //  getTunnelLineKeysForCells(c3, c2) will return [l3, l2, l1]
-                //  getTunnelLineKeysForCells(c3, c4) will return [l4, l5]
-                //  to get the correct order of lines for the tunnel we need to reverse the first result
-                console.log("(reversed)")
-                lineKeys.reverse()
-            }
-            for (const c of visitedCells) {
-                // remove cells from avalibility list
-                const r = avalibleCells.findIndex((ac) => ac.x === c.x && ac.y === c.y)
-                if (r !== -1) {
-                    console.log("remove avalible cell at indx", r, "(", avalibleCells[r].x, ",", avalibleCells[r].y, ")");
-                    avalibleCells.splice(r, 1);
-                }
-            }
-            tunnel.push(...lineKeys);
-        }
-        console.log("avalibleCells", JSON.stringify(avalibleCells))
-        if (tunnel.length > 0) {
-            const key = getTunnelKey(board, tunnel[0], tunnel[tunnel.length - 1]);
-            tunnels[key] = tunnel;
-        }
-    }
-    return tunnels;
 }
 
 function getTunnelType(board: Board, lineKeys: string[]) {
