@@ -38,7 +38,7 @@ export function getBestMove(board: Board): string[] {
     }
 
     const allTunnelLKs = getTunnelMap(board);
-    console.log("tunnel map\n", allTunnelLKs)
+    logTunnelMap(allTunnelLKs)
     const allTunnels = classifyTunnels(board, Object.values(allTunnelLKs))
 
     const allPotentialMoves = Object.entries(board.lines)
@@ -125,7 +125,7 @@ export function getTunnelMap(board: Board): Record<string, string[]> {
         const wPos = { x: x - 1, y: y }
         const directions = [nPos, ePos, sPos, wPos];
         const tunnel = []
-        console.log("\n\nenter get tunnel for ", {x, y})
+        console.log("\n\nenter get tunnel for ", { x, y })
         for (const nextPos of directions) {
             const { tunnel: lineKeys, visitedCells } = getTunnelLineKeysForCells(board, { x, y }, nextPos);
             console.log("for pos:", nextPos, "tunnel:", lineKeys, "visited: ", visitedCells)
@@ -188,7 +188,7 @@ function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semi
     const finalOpenTunnelPointDiff = finalOpenTunnel.lineKeys.length - 1;
     pointsGainedFromSemiSelectingAll += finalOpenTunnelPointDiff;
     console.log(logPrefix, "pointDiff for final tunnel", finalOpenTunnel.lineKeys, "=", finalOpenTunnelPointDiff)
-    
+
     const finalScore = scores.p2 + pointsGainedFromSemiSelectingAll;
     console.log(logPrefix, "finalScore =", finalScore, "(scores.p2 + pointsGainedFromSemiSelectingAll), (", scores.p2, "+", pointsGainedFromSemiSelectingAll, ")")
     console.log(logPrefix, "scores.p1 =", scores.p1, "will only semi-select if final score is greater than this")
@@ -231,7 +231,7 @@ function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunne
         console.error(logTag, "TODO not sure this is works for tunnels of len 2 tbh")
         return -2
     }
-    console.log(logTag, { start, end, second, secondFromEnd})
+    console.log(logTag, { start, end, second, secondFromEnd })
 
     const entryCell = board.lines[start].cells
         .find(cpos => {
@@ -388,7 +388,7 @@ function getTunnelLineKeysForCells(board: Board, originCellPos: CellPos, otherCe
     const tunnel: string[] = [];
     let currentCellPos = originCellPos;
     let nextCellPos = otherCellPos;
-    
+
     while (true) {
         const logPrefix = `[${currentCellPos.x},${currentCellPos.y} -> ${nextCellPos.x},${nextCellPos.y}]`
         const currentCell = getCell(board, currentCellPos)
@@ -396,14 +396,14 @@ function getTunnelLineKeysForCells(board: Board, originCellPos: CellPos, otherCe
             throw "invalid origin cell pos"
         }
         const nextCell = getCell(board, nextCellPos);
-        
+
         let sharedLine: string = getSharedLine(board, currentCellPos, nextCellPos)!;
         if (!sharedLine) {
             throw "inital cells must be adjacent"
         }
 
         const sharedLineIsSelected = board.lines[sharedLine].selected;
-        console.log(logPrefix, "1", { nextCell, cellType: nextCell !== undefined ? getCellType(board, nextCell) : undefined, sharedLine, sharedLineIsSelected})
+        console.log(logPrefix, "1", { nextCell, cellType: nextCell !== undefined ? getCellType(board, nextCell) : undefined, sharedLine, sharedLineIsSelected })
         if (sharedLineIsSelected) {
             // cells are not part of a tunnel together
             return { tunnel, visitedCells }
@@ -538,4 +538,11 @@ function getTunnelKey(board: Board, startLk: string, endLk: string) {
         }
     }
     return `${endLk}>${startLk}`
+}
+
+function logTunnelMap(tunnelMap: Record<string, string[]>): void {
+    const s = Object.values(tunnelMap)
+        .map(arr => JSON.stringify(arr))
+        .join(',\n')
+    console.log(`all tunnels\n`, `[\n${s}\n]`)
 }
