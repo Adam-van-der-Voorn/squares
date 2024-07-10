@@ -5,7 +5,7 @@ const base = {
     entry: {
         "main": './src/main/entry.tsx',
         "test": './src/test/entry.tsx',
-        "ai.worker.rand": './src/worker_ai/rand.ts',
+        "ai.worker.rng": './src/worker_ai/rng/entry.ts',
         "ai.worker.search": './src/worker_ai/search/entry.ts',
         "ai.worker.quick": './src/worker_ai/quick/entry.ts',
     },
