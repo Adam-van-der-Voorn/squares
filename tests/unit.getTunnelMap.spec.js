@@ -43,6 +43,31 @@ test('junction', () => {
     expect(actual).toEqual(expected)
 })
 
+test('arb state 1', () => {
+    const state = {
+        "rows": 5,
+        "cols": 5,
+        "moves":
+            ["0,0h", "1,0v", "0,1h", "1,1h", "1,2h", "2,1v", "0,2h", "0,1v", "0,2v", "0,3v", "1,2v", "1,3v", "4,0v", "4,1h", "2,2h", "3,2v", "3,3v", "2,4h", "1,4h", "3,2h", "3,0v", "2,0h", "2,4v", "3,4h", "3,5h", "4,5h", "5,4v", "5,3v", "4,3h"]
+    }
+
+    const expected = [
+        ["4,2v", "3,3h", "4,3v", "4,4h", "4,4v", "3,4v", "2,5h"],
+        ["1,4v", "1,5h"],
+        ["0,3h", "0,4h"],
+        ["2,2v", "1,3h", "2,3v", "2,3h"],
+        ["3,0h", "3,1h"],
+        ["3,1v", "2,1h", "2,0v", "1,0h"],
+        ["5,0v", "4,0h"],
+        ["1,1v"],
+        ["0,0v"]
+    ]
+    const actual = getTunnelsForState(state)
+    expect(actual).toEqual(expected)
+})
+
+
+
 function getTunnelsForState({ rows, cols, moves }) {
     const game = newGame(cols, rows)
     for (const x of moves) {
