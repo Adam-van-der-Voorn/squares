@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { useState } from "react";
 import { SquaresGame, getScores, newGame, selectLine } from "../game";
-import { GameWindow } from "./GameController";
+import { GameWindow } from "./GameWindow";
 import { KeyedMessageEvent, usePromiseWorker } from "../util/promiseWorker";
 import { setTimeoutP } from "../util/simple";
 import { useDebugColoredOpponentLines, useDebugMoveSeqs } from "../util/debug_tools";
