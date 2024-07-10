@@ -1,17 +1,10 @@
 import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, getScores } from "../../main/game";
 import { mulberry32, shuffle, unpack } from "../../main/util/simple";
 
-const RNG = mulberry32(387429827398);
-
+const DEFAULT_SEED = 387429827398;
 type Move = {
     points: number,
     lineKeys: string[]
-}
-
-type Tunnel = {
-    lineKeys: string[]
-    isStartClosed: boolean
-    isEndClosed: boolean
 }
 
 type GoalTunnel = {
@@ -19,19 +12,21 @@ type GoalTunnel = {
     isFullyClosed: boolean
 }
 
-export function getBestMove(board: Board): string[] {
-    const res = _getBestMove(board);
+export function getMoveSequence(board: Board, rng?: () => number): string[] {
+    rng = rng ?? mulberry32(DEFAULT_SEED);
+    
+    const res = getBestMoveSequence(board, rng);
     logcxt.movenum += 1;
     return res;
 }
 
-function _getBestMove(board: Board): string[] {
+function getBestMoveSequence(board: Board, rng: () => number): string[] {
     const avaliblePoints = unpack(board.cells)
         .filter(c => c.val.claim === null)
         .length
     const { p1: currentOpponentPoints, p2: currentOwnPoints } = getScores(board);
 
-    const possibleMoves = getHeuristicBoardEvaluation(board)
+    const possibleMoves = getHeuristicBoardEvaluation(board, rng)
 
     let bestMove: any = null;
     let counter = 0;
@@ -60,7 +55,7 @@ function _getBestMove(board: Board): string[] {
         }
 
         // evaluate board state for opponent, get max points they can get
-        const predictedOpponentMoves = getHeuristicBoardEvaluation(board);
+        const predictedOpponentMoves = getHeuristicBoardEvaluation(board, rng);
         const predictedOpponentMove = predictedOpponentMoves?.[0];
 
         // calc score based on how many points we think opponent will get
@@ -91,14 +86,14 @@ function _getBestMove(board: Board): string[] {
     return bestMove.lineKeys ?? [];
 }
 
-function getHeuristicBoardEvaluation(board: Board) {
+function getHeuristicBoardEvaluation(board: Board, rng: () => number) {
     const tunnelLineKeys = getTunnelLineKeys(board);
     lxd('tunnels:', JSON.stringify(tunnelLineKeys, null, 2))
 
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
-    shuffle(allPotentialMoves, RNG);
+    shuffle(allPotentialMoves, rng);
     lxd( 'num potenteial moves:', allPotentialMoves.length)
     // lxd( "potenteial moves:", getMoveList(board, allPotentialMoves, "[all-moves] "))
 

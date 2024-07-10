@@ -1,8 +1,7 @@
-import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, getScores, lineKey } from "../../main/game";
+import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getCell, getScores } from "../../main/game";
 import { mulberry32, shuffle } from "../../main/util/simple";
 
-const RNG = mulberry32(4398798765);
-
+const DEFAULT_SEED = 4398798765;
 type Tunnel = {
     lineKeys: string[]
     isStartClosed: boolean
@@ -14,21 +13,24 @@ type GoalTunnel = {
     isFullyClosed: boolean
 }
 
-export function getBestMove(board: Board): string[] {
-    // algo:
-    // if no tunnels are avalible then pick random free line
-    // if a closed tunnel + free line is avalible, close and select
-    // if there are no closed tunnels and no free lines, select the middle of the shortest tunnel
-    // if a closed tunnel + no free line is avalible:
-    //// we need to decide in between fully selecting and semi selecting the tunnel
-    //// e.g. half open tunnels of sizes 2, 2, 3, 4, 6, 9
-    //// calc final score X from semi-selecting every tunnel
-    //// -2, -2, -1, 0, +2, +7 = 9 - 5 = 4
-    //// X = current score + 4
-    //// if we do this the game will end
-    //// so if X > opponent score, we can guarentee a win
-    //// but if X < opponent score, we will def lose
-    //// so only semi select if X > opponent score
+/**
+ algo:
+ if no tunnels are avalible then pick random free line
+ if a closed tunnel + free line is avalible, close and select
+ if there are no closed tunnels and no free lines, select the middle of the shortest tunnel
+ if a closed tunnel + no free line is avalible:
+    we need to decide in between fully selecting and semi selecting the tunnel
+    e.g. half open tunnels of sizes 2, 2, 3, 4, 6, 9
+    calc final score X from semi-selecting every tunnel
+    -2, -2, -1, 0, +2, +7 = 9 - 5 = 4
+    X = current score + 4
+    if we do this the game will end
+    so if X > opponent score, we can guarentee a win
+    but if X < opponent score, we will def lose
+    so only semi select if X > opponent score
+ */
+export function getMoveSequence(board: Board, rng?: () => number): string[] {
+    rng = rng ?? mulberry32(DEFAULT_SEED)
 
     const anyUnselectedLine = Object.values(board.lines)
         .find(l => l.selected === false)
@@ -44,7 +46,7 @@ export function getBestMove(board: Board): string[] {
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
-    shuffle(allPotentialMoves, RNG);
+    shuffle(allPotentialMoves, rng);
 
     const goalTunnels = filterForGoalTunnels(allTunnels);
     const openTunnels = filterForOpenTunnels(allTunnels);

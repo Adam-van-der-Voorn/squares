@@ -1,4 +1,4 @@
-import { getBestMove } from "./lib";
+import { getMoveSequence } from "./lib";
 import { getAiOnMessage } from "../getAiOnMessage";
 
-self.onmessage = getAiOnMessage(getBestMove)
+self.onmessage = getAiOnMessage(getMoveSequence)

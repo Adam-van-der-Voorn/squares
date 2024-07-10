@@ -1,17 +1,17 @@
-import { getBestMove } from '../src/worker_ai/quick/lib';
+import { getMoveSequence } from '../src/worker_ai/quick/lib';
 import { test } from '@playwright/test';
 import { checkAiMoveSet } from './test_lib';
 
 test('easy decision 1', async ({ page }) => {
     const state = {"rows":2,"cols":2,"moves":["0,0h","1,0h","2,0v","2,1v","1,2h","0,2h","0,1v","0,0v","0,1h","1,0v","1,1h"]}
     const expectedMoveSet = ["1,1v"];
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });
 
 test('easy decision 2', async ({ page }) => {
     const state = {"rows":2,"cols":2,"moves":["0,0h","1,0h","2,0v","2,1v","1,2h","0,2h","0,1v","0,0v","0,1h"]}
     const expectedMoveSet = ["1,0v", "1,1h", "1,1v"];
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });
 
 test('easy decision 3', async ({ page }) => {
@@ -23,7 +23,7 @@ test('easy decision 3', async ({ page }) => {
         ]
     }
     const expectedMoveSet = ["0,2h", "1,0v"];
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });
 
 test('ai completes closed tunnel', async ({ page }) => {
@@ -39,7 +39,7 @@ test('ai completes closed tunnel', async ({ page }) => {
         ]
     }
     const expectedMoveSet = ["4,1v", "4,2h", "4,3h", "4,3v", "3,3h"];
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });
 
 test('ai completes half open tunnel', async ({ page }) => {
@@ -55,7 +55,7 @@ test('ai completes half open tunnel', async ({ page }) => {
     }
     const expectedMoveSet = ["1,1h", "2,1v", "2,2h", "2,3h", "2,3v", "1,3v", "0,3h", "0,2h", "0,1h", "0,0h"];
     
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });
 
 test(`ai holds of on completing half open tunnel so it can claim bigger one
@@ -71,7 +71,7 @@ test(`ai holds of on completing half open tunnel so it can claim bigger one
         ]
     }
     const expectedMoveSet = ["1,4h", "1,3v", "0,5h"];
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });
 
 test('ai fully completes closed loop', async ({ page }) => {
@@ -87,5 +87,5 @@ test('ai fully completes closed loop', async ({ page }) => {
     }
 
     const expectedMoveSet = ["4,4v","3,4v","2,4v","1,4v","0,4h","0,3h","0,2h","0,1h","1,0v", "1,1h","1,2h","1,3h","2,3v","3,3v","4,3v"];
-    await checkAiMoveSet(page, state, (board) => getBestMove(board), expectedMoveSet);
+    await checkAiMoveSet(page, state, (board) => getMoveSequence(board), expectedMoveSet);
 });

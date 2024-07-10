@@ -1,13 +1,15 @@
 import { Board } from "../../main/game";
 import { mulberry32, shuffle } from "../../main/util/simple";
 
-const RNG = mulberry32(4398798765);
+const DEFAULT_SEED = 4398798765;
 
-export function getBestMove(board: Board) {     
+export function getMoveSequence(board: Board, rng?: () => number) {   
+    rng = rng ?? mulberry32(DEFAULT_SEED)
+
     const avalibleLineKeys = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0])
 
-    const shuffled = shuffle(avalibleLineKeys, RNG)
+    const shuffled = shuffle(avalibleLineKeys, rng)
     return [shuffled[0]];
 };
