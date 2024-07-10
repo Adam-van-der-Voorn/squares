@@ -90,7 +90,7 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
             return;
         }
         selectLine(squaresGame, key);
-        setSquaresGame({... squaresGame})
+        setSquaresGame({ ...squaresGame })
     }
 
     const getLineJsx = (key: string, offsetX = 0, offsetY = 0) => {
@@ -132,13 +132,5 @@ export function Grid({ rows, cols, enabled, squaresGame, setSquaresGame }: Props
         </div>
     })
 
-    const squaresStyle = {
-        gridTemplateRows: `repeat(${rows}, 1fr)`,
-        gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        aspectRatio: `${cols} / ${rows}`
-    }
-
-    return <div className="squares" style={squaresStyle}>
-        {cellsJsx}
-    </div>
+    return <>{cellsJsx}</>
 }

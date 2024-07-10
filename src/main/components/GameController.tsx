@@ -11,6 +11,11 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
     const { rows, cols } = getBoardDimensions(squaresGame.board);
+    const squaresStyle = {
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        aspectRatio: `${cols} / ${rows}`
+    }
 
     const workerOpts = useMemo(() => ({ type: "module" }), [])
     const vsAI = aiWorkerUrl !== undefined;
@@ -25,12 +30,15 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
         if (!ref.current) {
             return;
         }
+        console.log("\ncall useLayoutEffect- currently:", "\nwidth=")
         if (style.width === "100%") {
             // case 1: card style is configured to work when it is shorter than the window dimensions
             const clientCard = ref.current.getBoundingClientRect();
             const maxHeight = windowHeight - (getPxValue(rootStyles, '--body-padding') * 2);
+            console.log("card height =", clientCard.height, "max =", maxHeight)
             if (clientCard.height > maxHeight) {
                 // card is taller then window dimensions, switch case
+                console.log("switch to width fit-content")
                 setStyle(prev => ({ ...prev, height: "100%", width: "fit-content" }))
             }
         }
@@ -121,7 +129,9 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
     const cat = "img/cat.jpeg"
 
     return <div className="card" style={style} ref={ref}>
-        <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} enabled={gridIsEnabled} rows={rows} cols={cols} />
+        <div className="squares" style={squaresStyle}>
+            <Grid squaresGame={squaresGame} setSquaresGame={setSquaresGame} enabled={gridIsEnabled} rows={rows} cols={cols} />
+        </div>
         <div className="scores">
             <div className={"player-details " + (squaresGame.turn === "p1" ? "player-details-active" : "")}>
                 <div className="player-details-2">
