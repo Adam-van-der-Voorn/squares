@@ -451,20 +451,23 @@ function tryFindTunnelStart(board: Board, initialLineKey: string): { tunnelStart
  * get all the linekeys in a tunnel, starting from the line inbetween prevcellpos and nextcellpos
 */
 function getTunnelFromStartingLineKey(board: Board, initialLineKey: string, startingCellPos: CellPos): string[] {
+    const logTag = `getTunnelFromStartingLineKey(${initialLineKey}):`;
     let nextCellPos: CellPos = startingCellPos;
     let currentLineKey = initialLineKey;
     const tunnel = [initialLineKey]
-    
     while (true) {
+        console.log(logTag, "current key =", currentLineKey, "next cell =", JSON.stringify(nextCellPos))
         // get the next line in the tunnel
         // i.e.  the unselected line on the unsafe adj cell that is not the current line
         const nextLineKey = getCell(board, nextCellPos)!.lines
             .find(lk => lk != currentLineKey && !board.lines[lk].selected)
+        console.log(logTag, "next key =", nextLineKey)
         if (!nextLineKey) {
             return tunnel;
         }
 
         if (nextLineKey === initialLineKey) {
+            console.log(logTag, "next key is inital key, donut tunnel", nextLineKey)
             // tunnel is a donut shape
             return tunnel;
         }
@@ -473,20 +476,23 @@ function getTunnelFromStartingLineKey(board: Board, initialLineKey: string, star
 
         // to get the next cell,
         // find the cell on nextlk that does not include the current lk
-        const next = board.lines[nextLineKey]!.cells
+        const maybeNext = board.lines[nextLineKey]!.cells
             .find(cpos => {
                 const cell = getCell(board, cpos)!
-                if (!cell.lines.includes(currentLineKey)) {
+                const type = getCellType(board, cell);
+                if (type === "unsafe" && !cell.lines.includes(currentLineKey)) {
                     return true;
                 }
                 return false;
             })
 
-        if (!next) {
+        console.log(logTag, "calc next cell =", JSON.stringify(maybeNext))
+
+        if (!maybeNext) {
             return tunnel;
         }
 
-        nextCellPos = next;
+        nextCellPos = maybeNext;
         currentLineKey = nextLineKey;
     }
 }

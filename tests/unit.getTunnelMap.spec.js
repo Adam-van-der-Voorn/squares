@@ -25,7 +25,7 @@ test('3 diff donuts', () => {
     expect(actual).toEqual(expected)
 });
 
-test.skip('junction', () => {
+test('junction', () => {
     const state = {
         "rows": 5,
         "cols": 5,
