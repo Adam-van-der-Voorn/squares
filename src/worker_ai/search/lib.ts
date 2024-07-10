@@ -1,7 +1,7 @@
 import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, getScores } from "../../main/game";
-import { shuffle, unpack } from "../../main/util/simple";
+import { mulberry32, shuffle, unpack } from "../../main/util/simple";
 
-const RNG_SEED = 387429827398;
+const RNG = mulberry32(387429827398);
 
 type Move = {
     points: number,
@@ -98,7 +98,7 @@ function getHeuristicBoardEvaluation(board: Board) {
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
-    shuffle(allPotentialMoves, RNG_SEED);
+    shuffle(allPotentialMoves, RNG);
     lxd( 'num potenteial moves:', allPotentialMoves.length)
     // lxd( "potenteial moves:", getMoveList(board, allPotentialMoves, "[all-moves] "))
 

@@ -11,11 +11,9 @@ export function unpack<T>(arr: T[][]) {
     return flattened;
 }
 
+
 /** https://stackoverflow.com/a/2450976/15250790 */
-export function shuffle<T>(array: Array<T>, seed?: number): T[] {
-    const rand = seed
-        ? mulberry32(seed)
-        : Math.random
+export function shuffle<T>(array: Array<T>, rand: () => number): T[] {
     let currentIndex = array.length, randomIndex;
 
     // While there remain elements to shuffle.
@@ -39,7 +37,7 @@ export async function setTimeoutP(ms: number): Promise<void> {
     })
 }
 
-function mulberry32(a: number) {
+export function mulberry32(a: number) {
     return function() {
       var t = a += 0x6D2B79F5;
       t = Math.imul(t ^ t >>> 15, t | 1);

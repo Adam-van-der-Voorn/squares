@@ -1,7 +1,7 @@
 import { Board, Cell, CellPos, _selectLineOnBoard, _unselectLineOnBoard, getBoardDimensions, getCell, getScores, lineKey } from "../../main/game";
-import { shuffle, unpack } from "../../main/util/simple";
+import { mulberry32, shuffle } from "../../main/util/simple";
 
-const RNG_SEED = 4398798765;
+const RNG = mulberry32(4398798765);
 
 type Tunnel = {
     lineKeys: string[]
@@ -44,7 +44,7 @@ export function getBestMove(board: Board): string[] {
     const allPotentialMoves = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0]);
-    shuffle(allPotentialMoves, RNG_SEED);
+    shuffle(allPotentialMoves, RNG);
 
     const goalTunnels = filterForGoalTunnels(allTunnels);
     const openTunnels = filterForOpenTunnels(allTunnels);

@@ -1,13 +1,13 @@
 import { Board } from "../../main/game";
-import { shuffle } from "../../main/util/simple";
+import { mulberry32, shuffle } from "../../main/util/simple";
 
-const RNG_SEED = 4398798765;
+const RNG = mulberry32(4398798765);
 
 export function getBestMove(board: Board) {     
     const avalibleLineKeys = Object.entries(board.lines)
         .filter(e => !e[1].selected)
         .map(e => e[0])
 
-    const shuffled = shuffle(avalibleLineKeys, RNG_SEED)
+    const shuffled = shuffle(avalibleLineKeys, RNG)
     return [shuffled[0]];
 };
