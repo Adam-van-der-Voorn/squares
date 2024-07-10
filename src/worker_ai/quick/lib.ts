@@ -234,8 +234,8 @@ function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunne
             return cellLines.includes(secondFromEnd)
         })
 
-    if (entryCell === undefined || lastCell === undefined) {
-        throw "cells should exist"
+    if (lastCell === undefined) {
+        throw "last cell should exist"
     }
 
     if (entryCell === lastCell) {
