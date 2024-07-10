@@ -1,6 +1,8 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
-import { getPxValue, useWindowDimensions } from "../util/simple";
+import { getPxValue } from "../util/dom";
+import { useWindowDimensions } from "../util/hooks";
+
 import { Grid } from "./Grid";
 import { getBoardDimensions, getScores } from "../game";
 
@@ -58,7 +60,7 @@ export function GameWindow({ squaresGame, setSquaresGame, vsAI }: any) {
             console.log("set squares height to", gridTemplateHeightStr)
         }
         else {
-            setSquaresStyle(prev => ({ ...prev, height: undefined }))
+            setSquaresStyle(prev => ({ ...prev, height: "" }))
             console.log("reset squares height")
 
         }

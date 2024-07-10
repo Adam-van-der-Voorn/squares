@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useState } from "react";
-
 export function unpack<T>(arr: T[][]) {
     // assume outer is rows, inner is cols
     const height = arr.length
@@ -11,28 +9,6 @@ export function unpack<T>(arr: T[][]) {
         }
     }
     return flattened;
-}
-
-export type ReactSetState<T> = React.Dispatch<React.SetStateAction<T>>
-
-export function useWindowDimensions() {
-    const [dimensions, setDimensions] = useState({ height: window.innerHeight, width: window.innerWidth })
-    const setWindowHeight = useCallback(() => {
-        return setDimensions({ height: window.innerHeight, width: window.innerWidth })
-    }, [setDimensions])
-    useEffect(() => {
-        window.addEventListener("resize", setWindowHeight);
-        return () => window.removeEventListener("resize", setWindowHeight);
-    }, [])
-    return {
-        windowWidth: dimensions.width,
-        windowHeight: dimensions.height
-    };
-}
-
-export function getPxValue(style: CSSStyleDeclaration, key: string) {
-    const p = style.getPropertyValue(key)
-    return parseInt(p)
 }
 
 /** https://stackoverflow.com/a/2450976/15250790 */

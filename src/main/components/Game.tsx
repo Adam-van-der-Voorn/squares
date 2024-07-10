@@ -20,7 +20,7 @@ export function Game({ width, height, vsAI }: any) {
     const scores = useMemo(() => getScores(squaresGame.board), [squaresGame])
 
     useEffect(() => {
-        if (vsAI && squaresGame.turn === "p2" && scores.winner === null) {
+        if (promptAI !== null && squaresGame.turn === "p2" && scores.winner === null) {
             const aiPromise = promptAI(squaresGame.board);
             if (aiPromise !== undefined) {
                 const otherPromise = setTimeoutP(AI_DELAY_MS);

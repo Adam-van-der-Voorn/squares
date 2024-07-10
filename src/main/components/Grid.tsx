@@ -1,10 +1,11 @@
 import React, { useEffect } from "react";
 import { useState } from "react";
 import { selectLine, SquaresGame } from "../game";
-import { ReactSetState, unpack } from "../util/simple";
+import { unpack } from "../util/simple";
 import { Line, Props as LineProps } from "./Line";
 import { Dots } from "./Dots";
 import { useDebugLineLabels } from "../util/debug_tools";
+import { ReactSetState } from "../util/hooks";
 
 export type Props = {
     rows: number;
