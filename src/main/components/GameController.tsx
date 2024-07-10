@@ -7,15 +7,15 @@ import { KeyedMessageEvent, usePromiseWorker } from "../util/promiseWorker";
 import { useDebugColoredOpponentLines, useDebugMoveSeqs } from "../util/debug_tools";
 
 export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDelayMs }: any) {
-    const [style, setStyle] = useState<Record<string, string>>({ width: "100%", height: "fit-content" })
+    const [style, setStyle] = useState<Record<string, string>>({ width: "100%", height: "max-content" })
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
     const { rows, cols } = getBoardDimensions(squaresGame.board);
-    const squaresStyle = {
+    const [squaresStyle, setSquaresStyle] = useState<Record<string, string>>({
         gridTemplateRows: `repeat(${rows}, 1fr)`,
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         aspectRatio: `${cols} / ${rows}`
-    }
+    })
 
     const workerOpts = useMemo(() => ({ type: "module" }), [])
     const vsAI = aiWorkerUrl !== undefined;
@@ -30,7 +30,7 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
         if (!ref.current) {
             return;
         }
-        console.log("\ncall useLayoutEffect- currently:", "\nwidth=")
+        console.log("\ncall useLayoutEffect- currently:", "width=", style.width)
         if (style.width === "100%") {
             // case 1: card style is configured to work when it is shorter than the window dimensions
             const clientCard = ref.current.getBoundingClientRect();
@@ -38,25 +38,40 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
             console.log("card height =", clientCard.height, "max =", maxHeight)
             if (clientCard.height > maxHeight) {
                 // card is taller then window dimensions, switch case
-                console.log("switch to width fit-content")
-                setStyle(prev => ({ ...prev, height: "100%", width: "fit-content" }))
+                console.log("switch to width max-content")
+                setStyle(prev => ({ ...prev, height: "100%", width: "max-content" }))
             }
         }
         else {
             // case 2: card style is configured to work when it is wider than the window dimensions
-            const gridTemplateHeightStr = getComputedStyle(ref.current)
-                .gridTemplateRows
-                .split(' ')?.[0]
-            const gridTemplateHeight = parseInt(gridTemplateHeightStr);
-            const actualGridHeight = ref.current.querySelector(".squares")!
-                .getBoundingClientRect()
-                .height;
-            if (actualGridHeight < gridTemplateHeight) {
-                // card is taller than it should be, switch case
-                setStyle(prev => ({ ...prev, height: "fit-content", width: "100%" }))
+            const clientCard = ref.current.getBoundingClientRect();
+            const maxWidth = windowWidth - (getPxValue(rootStyles, '--body-padding') * 2);
+            console.log("card width =", clientCard.width, "max =", maxWidth)
+            if (clientCard.width > maxWidth) {
+                // card is wider than it should be, switch case
+                console.log("switch to height max-content")
+                setStyle(prev => ({ ...prev, height: "max-content", width: "100%" }))
             }
         }
     }, [windowHeight, windowWidth])
+
+    useLayoutEffect(() => {
+        if (!ref.current) {
+            return
+        }
+        if (style.width === "max-content") {
+            const gridTemplateHeightStr = getComputedStyle(ref.current)
+                .gridTemplateRows
+                .split(' ')?.[0]
+            setSquaresStyle(prev => ({ ...prev, height: gridTemplateHeightStr }))
+            console.log("set squares height to", gridTemplateHeightStr)
+        }
+        else {
+            setSquaresStyle(prev => ({ ...prev, height: undefined }))
+            console.log("reset squares height")
+
+        }
+    }, [style])
 
     useLayoutEffect(() => {
         if (!ref.current) {
