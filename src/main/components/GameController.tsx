@@ -1,12 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useState } from "react";
-import { getPxValue, setTimeoutP, useWindowDimensions } from "../util/simple";
+import { getPxValue, useWindowDimensions } from "../util/simple";
 import { Grid } from "./Grid";
-import { getBoardDimensions, getScores, selectLine } from "../game";
-import { KeyedMessageEvent, usePromiseWorker } from "../util/promiseWorker";
-import { useDebugColoredOpponentLines, useDebugMoveSeqs } from "../util/debug_tools";
+import { getBoardDimensions, getScores } from "../game";
 
-export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDelayMs }: any) {
+export function GameWindow({ squaresGame, setSquaresGame, vsAI }: any) {
     const [style, setStyle] = useState<Record<string, string>>({ width: "100%", height: "max-content" })
     const ref = useRef<HTMLDivElement>(null)
     const { windowHeight, windowWidth } = useWindowDimensions()
@@ -17,14 +15,7 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
         aspectRatio: `${cols} / ${rows}`
     })
 
-    const workerOpts = useMemo(() => ({ type: "module" }), [])
-    const vsAI = aiWorkerUrl !== undefined;
-    const promptAi = usePromiseWorker(aiWorkerUrl, workerOpts as any)
-
     const rootStyles = getComputedStyle(document.documentElement)
-
-    const debugMarkLineAsOpponent = useDebugColoredOpponentLines()
-    useDebugMoveSeqs(squaresGame, setSquaresGame);
 
     useLayoutEffect(() => {
         if (!ref.current) {
@@ -116,28 +107,6 @@ export function GameController({ squaresGame, setSquaresGame, aiWorkerUrl, aiDel
     else {
         message = `It was a tie, ${scores.p1} all!`
     }
-
-    useEffect(() => {
-        if (vsAI && squaresGame.turn === "p2" && scores.winner === null) {
-            const aiPromise = promptAi(squaresGame.board);
-            if (aiPromise !== undefined) {
-                const otherPromise = setTimeoutP(aiDelayMs);
-                Promise.all([aiPromise, otherPromise]).then(all => {
-                    const ev: KeyedMessageEvent = all[0];
-                    if (!ev) {
-                        return;
-                    }
-                    const lineKey = ev.data.message;
-                    if (typeof lineKey !== 'string') {
-                        return;
-                    }
-                    debugMarkLineAsOpponent(lineKey)
-                    selectLine(squaresGame, lineKey);
-                    setSquaresGame({ ...squaresGame });
-                })
-            }
-        }
-    }, [squaresGame])
 
     const gridIsEnabled = !vsAI || squaresGame.turn === "p1";
 
