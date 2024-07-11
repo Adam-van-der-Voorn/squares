@@ -7,7 +7,6 @@ import { GetMoveSequence } from "../src/worker_ai/types"
 
 const LOG_TAG = "fuzz:"
 
-// TODO
 // only currently works with `rng quick` as ai params, bc the quick ai assumes it is p2
 
 const fnMap: Record<string, GetMoveSequence> = {

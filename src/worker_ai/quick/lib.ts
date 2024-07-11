@@ -152,16 +152,14 @@ function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semi
     // to close the next open tunnel, leaving us with the same decision
     // so we can calc the final score if we always semi-select to see if we win or not
 
-    // TODO we need to handle open tunnels of size 1-2 differently, as they cannot be semi-selected.
-
     if (openTunnels.length === 0) {
         return false;
     }
 
     // we initlaise the points gained as the len of the semi-select candidate minus four,
     // as four points are taken off for the two cells we do not select and therefore give to the opponent
-    // TODO we need to function similar (same?) as getPointGainForSemiSelctionOfOpenTunnel
-    // to also handle the donut case for this
+    // TODO #3 we need to function similar (same?) as getPointGainForSemiSelctionOfOpenTunnel
+    // to also handle case where this tunnel is fully closed
     let pointsGainedFromSemiSelectingAll = semiSelectableTunnel.lineKeys.length - 4;
     console.log(logPrefix, "inital pointsGainedFromSemiSelecting =", pointsGainedFromSemiSelectingAll)
 
@@ -185,9 +183,9 @@ function shouldSemiSelect(board: Board, scores: { p1: number, p2: number }, semi
         return true;
     }
     else if (finalScore === scores.p1) {
+        // known issue #2
         // we can guarentee a tie if we semi-select all open tunnels
         // not sure if worth or not tbh
-        // TODO ???
         return false
     }
     else {
@@ -206,18 +204,21 @@ function getPointGainForSemiSelctionOfOpenTunnel(board: Board, openTunnel: Tunne
         throw "only works with open tunnels"
     }
 
+    if (openTunnel.lineKeys.length === 1) {
+        throw "invalid state"
+    }
+
+    if (openTunnel.lineKeys.length == 2) {
+        // known issue #1:
+        // we need to handle tunnels of length 2 differently, as they cannot be semi-selected
+        // we just pessimistically assume that the opponent will claim the tunnel, but this is not optimal
+        return -1;
+    }
+
     const start = openTunnel.lineKeys[0];
-    const second = openTunnel.lineKeys.at(1);
-    const secondFromEnd = openTunnel.lineKeys.at(openTunnel.lineKeys.length - 2);
-    if (second === undefined || secondFromEnd === undefined) {
-        console.error(logTag, "TODO not sure this is works for tunnels of len 1 tbh")
-        return -2
-    }
+    const second = openTunnel.lineKeys[1];
+    const secondFromEnd = openTunnel.lineKeys[openTunnel.lineKeys.length - 2];
     const end = openTunnel.lineKeys[openTunnel.lineKeys.length - 1]
-    if (end === second) {
-        console.error(logTag, "TODO not sure this is works for tunnels of len 2 tbh")
-        return -2
-    }
     console.log(logTag, { start, end, second, secondFromEnd })
 
     const entryCell = board.lines[start].cells

@@ -44,7 +44,7 @@ export function getPromiseWorker(workerFilename: string, workerOpts?: WorkerOpti
 
     const terminateWorker = () => {
         worker.terminate()
-        // TODO reject promises?
+        // reject promises?
     }
 
     const workerRequest = (message: unknown) => {

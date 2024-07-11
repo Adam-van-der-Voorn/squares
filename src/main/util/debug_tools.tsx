@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { SquaresGame, getBoardDimensions, selectLine, setMoveListener } from "../game";
 
-const DEBUG_COLORED_OPPONENT_LINES = true;
+const DEBUG_COLORED_OPPONENT_LINES = false;
 
-const DEBUG_LINE_LABELS = true;
+const DEBUG_LINE_LABELS = false;
 
 export function useDebugColoredOpponentLines() {
     const [opponentLines, setOpponentLines] = useState<string[]>([])
