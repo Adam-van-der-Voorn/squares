@@ -182,6 +182,12 @@ export function getScores(board: Board) {
     return { ...claims, winner }
 }
 
+export function getNumUnselectedLines(board: Board): number {
+    return Object.keys(board.lines)
+        .filter(lk => !board.lines[lk].selected)
+        .length
+}
+
 export function getCell(board: Board, pos: CellPos): Cell | undefined {
     if (pos.x < 0 || pos.y < 0) {
         return undefined;

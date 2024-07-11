@@ -1,0 +1,11 @@
+#!/bin/sh
+
+
+# e.g.
+# fuzz/run rng quick 5 5 "123452643"  
+
+set -e
+
+node_modules/typescript/bin/tsc --project fuzz/tsconfig.json
+node fuzz/out/fuzz/entry.js "$@"
+

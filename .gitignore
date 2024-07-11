@@ -1,6 +1,7 @@
 static/**/*.bundle.*
 node_modules
 _misc/
+fuzz/out
 /test-results/
 /playwright-report/
 /blob-report/
