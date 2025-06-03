@@ -3,7 +3,7 @@
 ```
 npm run build
 # or for development
-npx run build:dev
+npm run build:dev
 ```
 
 # play
